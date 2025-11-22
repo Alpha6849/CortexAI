@@ -17,7 +17,7 @@ This becomes the **foundation** for Phase 2 when we add LLM reasoning.
 
 ---
 
-## 🎯 Goals for Phase 1
+##  Goals for Phase 1
 
 ### ✔ Functional Requirements
 - CSV data ingestion  
