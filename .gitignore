@@ -1,0 +1,20 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# Environment files
+.env
+*.env
+
+# Streamlit secrets
+.streamlit/secrets.toml
+
+# Results (large auto-generated files)
+Phase1_AutoML_EDA/results/
+
+# Temp files (OneDrive, Office, etc.)
+~$*
+
+# Model binaries
+*.pkl
+*.sav
