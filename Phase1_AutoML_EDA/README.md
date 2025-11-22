@@ -45,21 +45,29 @@ This becomes the **foundation** for Phase 2 when we add LLM reasoning.
 Phase1_AutoML_EDA/
 │
 ├── data/
-│   ├── sample.csv
-│   └── cleaned/
-│
 ├── results/
-│   ├── eda_reports/
-│   ├── models/
-│   └── logs/
 │
-└── notebooks/
-    ├── 00_main_pipeline.ipynb
-    ├── 01_data_loader.ipynb
-    ├── 02_schema_detector.ipynb
-    ├── 03_data_cleaner.ipynb
-    ├── 04_eda.ipynb
-    └── 05_model_training.ipynb
+├── notebooks/
+│   ├── 00_main_pipeline.ipynb
+│   ├── 01_data_loader.ipynb
+│   ├── 02_schema_detector.ipynb
+│   ├── 03_data_cleaner.ipynb
+│   ├── 04_eda.ipynb
+│   └── 05_model_training.ipynb
+│
+├── app/
+│   └── app.py
+│
+├── pipeline/
+│   ├── loader.py
+│   ├── schema.py
+│   ├── cleaner.py
+│   ├── eda.py
+│   ├── trainer.py
+│   └── __init__.py
+│
+└── README.md
+
 ```
 
 ## 🔧 Phase 1 Notebook Modules
