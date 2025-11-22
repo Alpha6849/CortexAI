@@ -10,7 +10,6 @@
   - Setting data path
   - CSV loading function
   - Basic dataset inspection
-- Learned how to structure clean, modular notebooks.
 - Also confirmed dataset has no missing values.
 
 
