@@ -15,7 +15,7 @@ The goal is to build a modular pipeline that can be expanded with LLM reasoning 
 ## 📌 Project Structure
 ```text
 
-AI scientist/
+Cortex AI/
 │
 ├── Phase1_AutoML_EDA/
 ├── (future) Phase2_LLM_Agent/
@@ -25,7 +25,6 @@ AI scientist/
 ├── LICENSE
 └── README.md
 
----
 ```
 
 ---
