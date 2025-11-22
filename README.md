@@ -13,6 +13,7 @@ The goal is to build a modular pipeline that can be expanded with LLM reasoning 
 ---
 
 ## 📌 Project Structure
+```text
 
 AI scientist/
 │
@@ -25,7 +26,7 @@ AI scientist/
 └── README.md
 
 ---
-
+```
 
 ---
 
