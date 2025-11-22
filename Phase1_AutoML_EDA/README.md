@@ -41,9 +41,12 @@ This becomes the **foundation** for Phase 2 when we add LLM reasoning.
 
 ## 📁 Folder Structure (Phase 1)
 
+```text
+
 Phase1_AutoML_EDA/
 │
 ├── data/
+│
 ├── results/
 │
 ├── notebooks/
@@ -68,8 +71,9 @@ Phase1_AutoML_EDA/
 ├── notes.md
 └── README.md
 
-( Daily logs and progress updates are maintained in notes.md )
+```
 
+( Daily logs and progress updates are maintained in notes.md )
 
 ## 🔧 Phase 1 Notebook Modules
 
