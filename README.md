@@ -1,81 +1,74 @@
-# CortexAI — Where Data Learns to Think
+# Cortex AI — Autonomous Data Scientist
 
-> Upload any CSV. CortexAI automatically cleans, analyzes, models, and explains your dataset.
+Cortex AI is an automated data analysis system that takes a CSV file and performs:
 
----
+- Data loading  
+- Cleaning and preprocessing  
+- Exploratory data analysis  
+- Automatic model training  
+- Metric reporting  
 
-## ⚙️ Overview
-
-**CortexAI** is an **autonomous AI data scientist** that combines:
-- Automated **data cleaning & preprocessing**
-- Smart **EDA (Exploratory Data Analysis)**
-- AutoML model selection & training
-- Interactive **visual insights**
-
-Built with:
-> 🐍 Python · ⚡ Streamlit · 🤖 Scikit-learn · 📊 Plotly ·  XGBoost
+The goal is to build a modular pipeline that can be expanded with LLM reasoning and deeper ML capabilities in later phases.
 
 ---
 
-##  Features
- CSV Upload & Schema Detection  
- Missing Values & Outlier Handling  
- Automated EDA Summary  
- Model Training (Classification / Regression)  
- Metrics + Confusion Matrix + Visual Plots  
- Streamlit UI for seamless use  
+## 📌 Project Structure
+
+AI scientist/
+│
+├── Phase1_AutoML_EDA/
+├── (future) Phase2_LLM_Agent/
+├── (future) Phase3_DL_Agent/
+├── (future) Phase4_Deployment/
+│
+├── LICENSE
+└── README.md
 
 ---
 
-##  How It Works
-1. Upload any `.csv` file  
-2. CortexAI automatically:
-   - Detects column types (numeric, categorical, target)
-   - Cleans data (missing values, outliers)
-   - Performs EDA (distributions, correlations)
-   - Trains the best-fit ML model
-   - Shows results, metrics, and plots  
 
 ---
 
-##  Run Locally
+## 🧭 Phase Overview
 
-### 1️ Clone this repo
-```bash
-git clone https://github.com/Alpha6849/CortexAI.git
-cd CortexAI/Phase1_AutoML_EDA
- Install dependencies
-bash
-Copy code
-pip install -r requirements.txt
- Run the Streamlit app
-bash
-Copy code
-streamlit run main.py
- Upload your CSV and enjoy 🚀
-📈 Future Roadmap
-🔜 Phase 2: LLM Reasoning (natural language pipeline planning)
+### **Phase 1 — AutoML + EDA Engine**
+- CSV upload  
+- Schema detection  
+- Data cleaning  
+- Automated EDA  
+- Automated ML model training  
+- Streamlit interface  
+- First working MVP  
 
-🔜 Phase 3: Deep Learning Imputation + SHAP explainability
+### **Phase 2 — LLM Reasoning Layer**
+- Natural language instructions  
+- Pipeline planning via LLM  
+- Automatic execution + explanation  
+- Chat-based interface  
 
-🔜 Phase 4: Streamlit Cloud + Public Demo
+### **Phase 3 — Deep Learning & Agents**
+- TabNet / AutoEncoder modules  
+- Multi-agent workflow  
+- Explainability tools (SHAP, error analysis)  
 
-🧾 License
-MIT License © 2025 Prathamesh
-
-yaml
-Copy code
+### **Phase 4 — Deployment**
+- Cloud deployment  
+- Documentation  
+- Public demo  
 
 ---
 
-# 📦 requirements.txt (copy this)
+## 🛠 Tech Stack
 
-```txt
-streamlit
-pandas
-numpy
-scikit-learn
-xgboost
-ydata-profiling
-plotly
-matplotlib
+- Python  
+- Pandas, NumPy  
+- Scikit-learn, XGBoost  
+- ydata-profiling  
+- Streamlit  
+- (Phase 2+) LLM APIs  
+
+---
+
+## 📄 Notes
+Each phase contains its own notes.md file to track daily progress.  
+
