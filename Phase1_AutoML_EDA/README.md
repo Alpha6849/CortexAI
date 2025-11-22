@@ -17,7 +17,7 @@ This becomes the **foundation** for Phase 2 when we add LLM reasoning.
 
 ---
 
-##  Goals for Phase 1
+## ⭐ Goals for Phase 1
 
 ### ✔ Functional Requirements
 - CSV data ingestion  
@@ -29,78 +29,65 @@ This becomes the **foundation** for Phase 2 when we add LLM reasoning.
 - Profiling report  
 - Automatic ML model training  
 - Metric comparison (Accuracy, R², F1-score, etc.)  
-- Streamlit interface end-to-end  
+- End-to-end notebook workflow  
 
 ### ✔ Technical Deliverables
-- Modular Python code in `/src`  
-- Streamlit app in `/app`  
-- Results folder for reports  
-- Working MVP that anyone can use locally  
+- Clean Jupyter notebook pipeline  
+- Modular notebooks for each step  
+- Results folder for reports/models  
+- Working MVP that runs locally  
 
 ---
 
 ## 📁 Folder Structure (Phase 1)
-```text
 
+```text
 Phase1_AutoML_EDA/
 │
 ├── data/
-│ ├── sample.csv
-│ └── cleaned/
+│   ├── sample.csv
+│   └── cleaned/
 │
 ├── results/
-│ ├── eda_reports/
-│ ├── models/
-│ └── logs/
+│   ├── eda_reports/
+│   ├── models/
+│   └── logs/
 │
-├── src/
-│ ├── data_loader.py
-│ ├── schema_detector.py
-│ ├── data_cleaner.py
-│ ├── eda_engine.py
-│ ├── model_trainer.py
-│ ├── utils.py
-│ └── init.py
-│
-├── app/
-│ └── app.py
-│
-├── main.py
-├── README.md
-└── requirements.txt
-
+└── notebooks/
+    ├── 00_main_pipeline.ipynb
+    ├── 01_data_loader.ipynb
+    ├── 02_schema_detector.ipynb
+    ├── 03_data_cleaner.ipynb
+    ├── 04_eda.ipynb
+    └── 05_model_training.ipynb
 ```
 
----
+## 🔧 Phase 1 Notebook Modules
 
-## 🔧 Phase 1 Modules
-
-### **data_loader.py**
+### **01_data_loader.ipynb**
 - Load CSV  
 - Validate file type  
 - Encoding detection  
 
-### **schema_detector.py**
+### **02_schema_detector.ipynb**
 - Detect data types  
+- Separate numeric / categorical / datetime  
 - Suggest target column  
 
-### **data_cleaner.py**
+### **03_data_cleaner.ipynb**
 - Missing values (median/mode)  
 - Outlier removal (IQR)  
 - Datatype casting  
 
-### **eda_engine.py**
-- Summary stats  
+### **04_eda.ipynb**
+- Summary statistics  
 - Correlation heatmap  
 - Profiling report (HTML)  
 
-### **model_trainer.py**
+### **05_model_training.ipynb**
 - Task detection  
 - Train ML models  
-- Return best model  
+- Compare basic metrics  
 
-### **app/app.py**
-- Full Streamlit UI flow  
-
----
-  
+### **00_main_pipeline.ipynb**
+- Full linear AutoML + EDA pipeline  
