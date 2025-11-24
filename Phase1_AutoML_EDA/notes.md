@@ -27,10 +27,35 @@
 - Created master function `generate_schema(df)` that runs the entire pipeline.
 - Validated everything works correctly on the Iris dataset.
 
-Next:
-- Begin Notebook 03 — Data Cleaner.
-- Implement missing value imputation, outlier handling, datatype casting.
-- Save cleaned datasets into data/cleaned/.
+## 🗓️ Day 3 (24/11/25) – Data Cleaning Notebook Completed
 
+- Continued working on Notebook 03 (Data Cleaning).
+- Loaded the cleaned dataset from previous notebook.
+- Debugged schema regeneration issues.
+- Added missing value imputation (median + mode).
+- Implemented outlier handling using the IQR method.
+- Added datatype fixing (numeric conversion, categorical cleaning).
+- Built logic for dropping ID + low-variance columns.
+- Discovered a major bug in ID detection (Width → "id"), fixed using regex.
+- Rebuilt schema cleanly after fixing the function.
+- Successfully ensured only the correct ID column ("Id") is dropped.
+- Saved final cleaned dataset as:
+  - CSV
+  - Parquet
+- Generated a professional cleaning summary report with details.
 
+###  What I learned
+- ID detection can fail if substring "id" appears inside words like "Width".
+- Good debugging needs step-by-step checking of uniqueness + schema.
+- Parquet format is faster and better for ML pipelines.
+- Cleaning pipelines need careful schema rebuild after function changes.
+
+### 📁 Output Generated
+- `cleaned_dataset_<timestamp>.csv`
+- `cleaned_dataset_<timestamp>.parquet`
+- `cleaning_report_<timestamp>.txt`
+
+###  Status :-
+Notebook 03 is **fully completed** and working correctly.
+Next step = Notebook 04 (EDA Engine).
 
