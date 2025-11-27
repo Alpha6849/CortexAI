@@ -59,3 +59,32 @@
 Notebook 03 is **fully completed** and working correctly.
 Next step = Notebook 04 (EDA Engine).
 
+## 📅 [Date: 27/11/25] — Completed Notebook 04 (EDA Engine)
+
+###  What was done:
+- Loaded the cleaned dataset from Notebook 03.
+- Generated missing value summary, numeric stats, and categorical stats.
+- Visualized:
+  - Correlation heatmap (numeric)
+  - Histograms (numeric)
+  - Countplots (categorical)
+  - Boxplots vs target
+  - Pairplot (numeric relationships)
+- Created a full automated EDA profiling report using ydata-profiling.
+- Saved HTML report into `results/eda_reports/eda_report_<timestamp>.html`.
+- Created a lightweight EDA Summary JSON for use in the Streamlit app.
+- Verified everything runs smoothly on Python 3.10.
+
+###  Notes:
+- Kernel was switched to Python 3.10 for profiling compatibility.
+- All outputs saved in `results/eda_reports/`.
+- Dataset used: latest cleaned CSV from Notebook 03.
+- No cleaning or mutations in Notebook 04 — only analysis + visualization.
+
+###  Next Steps:
+- Begin Notebook 05 (Model Training).
+- Detect task type (classification vs regression).
+- Train baseline models (Logistic Regression, Random Forest, XGBoost, Linear Regression, etc.).
+- Auto-select best model.
+- Save model + metrics.
+
