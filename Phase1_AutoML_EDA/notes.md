@@ -88,3 +88,35 @@ Next step = Notebook 04 (EDA Engine).
 - Auto-select best model.
 - Save model + metrics.
 
+## 📅 [2025-11-29] — Completed Notebook 05 (Model Training)
+
+###  What was done:
+- Loaded cleaned dataset and detected classification task (Species).
+- Split into train/test sets with stratification.
+- Defined model zoo (Logistic Regression, RandomForest, KNN, SVC, XGBoost).
+- Trained all models using a unified loop.
+- Achieved top accuracy of 1.0 with KNN (Iris dataset).
+- Saved best model as .pkl in `results/models/`.
+- Saved training summary logs (JSON).
+- Extracted feature importance from RandomForest and XGBoost.
+- Saved feature importance JSON as well.
+
+###  Phase 1 Summary:
+Phase 1 developed a complete AutoML pipeline in notebook format:
+1. Data Loading  
+2. Schema Detection  
+3. Data Cleaning  
+4. EDA Engine  
+5. Model Training
+
+Phase 1 Outputs:
+- Cleaned datasets (CSV + Parquet)
+- Cleaning logs
+- Profiling HTML report
+- EDA summary JSON
+- Model training summary JSON
+- Best model pickle file
+- Feature importance JSON
+
+###  Next Step:
+Begin **00_main_pipeline.ipynb**, a clean, end-to-end showcase notebook, and then proceed to Phase 2 (exporting functions to pipeline/*.py + Streamlit App + LLM integration).
