@@ -1,4 +1,4 @@
-# Cortex AI — Autonomous Data Scientist
+# Cortex AI — Your Autonomous ML & Data Science Engine
 
 Cortex AI is an automated data analysis system that takes a CSV file and performs:
 
