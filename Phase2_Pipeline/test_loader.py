@@ -1,6 +1,6 @@
 from pipeline.loader import DataLoader
 
-# CHANGE THIS PATH to any CSV you want to test
+# trying on my sample iris csv 
 csv_path = r"D:\AI scientist\Phase1_AutoML_EDA\data\Sample.csv"
 
 try:
