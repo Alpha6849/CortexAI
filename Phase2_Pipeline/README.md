@@ -34,8 +34,7 @@ Phase2_Pipeline/
 
 - Convert Phase 1 notebook logic into real `.py` modules
 - Build a Streamlit UI for real usage
-- Add LLM insight features (Pro tier)
-- Architect the project to be monetizable at Phase 2 end
+- Add LLM insight features 
 - Maintain clean engineering workflow
 - Prepare the codebase for future deployment (Phase 4)
 
