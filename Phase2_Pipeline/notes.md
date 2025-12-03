@@ -25,14 +25,9 @@ Notes:
 
 ---
 
-## 🧩 Active Module
-`loader.py` — implementing incremental blocks (our “cell-by-cell” workflow).
-
 ---
 
----
-
-## 📌 Module: loader.py — Completed
+## 📌 Module: loader.py — Completed (3/12/25)
 
 ### 🔹 Overview
 The DataLoader module has been fully implemented as the first production-quality module of Phase 2. It converts the CSV-loading logic from Phase 1 notebooks into a robust, safe, reusable Python component.
@@ -41,7 +36,7 @@ This module ensures CSV files are handled professionally for real-world usage in
 
 ---
 
-## Features Implemented (3/12/25)
+## Features Implemented
 
 ### Module Header & Imports
 - Added clean docstring.
