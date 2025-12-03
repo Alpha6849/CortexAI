@@ -1,9 +1,7 @@
 from pipeline.loader import DataLoader
 from pipeline.schema import SchemaDetector
 
-# ----------------------------------------
-# CHANGE THIS PATH TO ANY CSV YOU WANT
-# ----------------------------------------
+# trying on my sample iris csv first 
 csv_path = r"D:\AI scientist\Phase1_AutoML_EDA\data\Sample.csv"
 
 
