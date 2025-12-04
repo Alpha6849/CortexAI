@@ -106,10 +106,10 @@ This file sits **outside** the `pipeline/` folder.
 
 ---
 
-## 📎 Next Steps
+##  Next Steps
 The next pipeline module to implement:
 
-### **➡ schema.py — Automatic schema detection**
+### ** schema.py — Automatic schema detection**
 
 This will include:
 - identifying numeric / categorical / datetime columns  
