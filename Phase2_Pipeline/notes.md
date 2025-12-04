@@ -27,7 +27,7 @@ Notes:
 
 ---
 
-## 📌 Module: loader.py — Completed (3/12/25)
+##  Module: loader.py — Completed (3/12/25)
 
 ### 🔹 Overview
 The DataLoader module has been fully implemented as the first production-quality module of Phase 2. It converts the CSV-loading logic from Phase 1 notebooks into a robust, safe, reusable Python component.
@@ -220,7 +220,7 @@ This engine is now the **reliable backbone** of all future pipeline steps.
 
 ###  Next Module
 
-➡️ Rewrite automated EDA (visual + statistical) for the production pipeline:
+ Rewrite automated EDA (visual + statistical) for the production pipeline:
 
 - Dataset summary generation  
 - Smart plot selection  
