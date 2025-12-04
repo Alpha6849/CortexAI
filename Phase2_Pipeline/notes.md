@@ -119,5 +119,52 @@ This will include:
 
 ---
 
+---
+
+##  Module: schema.py — Core Detection Completed (3/12/25 + 4/12/25)
+
+### 🔹 Overview
+The SchemaDetector module converts raw DataFrames into clear schema metadata,
+enabling downstream AutoML components (cleaner, EDA, trainer, UI, LLM insights)
+to understand how to treat each column.
+
+---
+
+##  Features Implemented
+
+###  Module header + imports
+Prepared logger and imports for production module.
+
+### Class skeleton
+Initialized SchemaDetector with DataFrame input and detect() placeholder.
+
+### Column type detection
+- `_detect_numeric_columns()` → int/float
+- `_detect_categorical_columns()` → object/string
+- `_detect_datetime_columns()` → safe detection (skips numeric)
+
+###  ID column detection (regex safe)
+- Uses name patterns (Id, uuid, serial, index…)
+- Uses uniqueness ratio (avoid leakage)
+- Fixed Phase 1 bug where "width" matched "id"
+
+###  Target column detection
+- Detects label via name patterns
+- Falls back to last column heuristic
+- Falls back to unique value heuristics
+- Supports both classification & regression datasets
+
+###  Full detect() method
+Returns unified schema dictionary formatted as:
+
+```python
+{
+    "numeric": [...],
+    "categorical": [...],
+    "datetime": [...],
+    "id_columns": [...],
+    "target": "Species"
+}
+
 
 
