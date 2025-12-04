@@ -188,9 +188,7 @@ class DataCleaner:
             logger.info("No high-cardinality categorical columns.")
             
     def _generate_report(self) -> Dict:
-        """
-        Returns structured cleaning actions for UI/pipeline.
-        """
+        
         return {
             "removed_id_columns": self.report.get("removed_id_columns", []),
             "missing_values": self.report.get("missing_values", {}),
