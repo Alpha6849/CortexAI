@@ -34,9 +34,6 @@ class DataCleaner:
         self.report = {}  # store cleaning summary
 
     def clean(self) -> pd.DataFrame:
-        """
-        Run cleaning steps in correct order.
-        """
         logger.info("Starting data cleaning pipeline...")
 
         self._drop_id_columns()
@@ -46,9 +43,6 @@ class DataCleaner:
         return self.df.reset_index(drop=True)
 
 
-
-
-    
     def _drop_id_columns(self):
         """Remove ID columns based on schema. , or else model acc = 100% cause it will use labels to detect"""
         id_cols = self.schema.get("id_columns", [])
@@ -70,7 +64,7 @@ class DataCleaner:
 
         # Numeric columns → median
         for col in self.schema.get("numeric", []):
-            if col not in self.df.columns:   # 👈 SKIP if column was removed
+            if col not in self.df.columns:   
                 continue
 
             if self.df[col].isna().sum() > 0:
@@ -80,7 +74,7 @@ class DataCleaner:
 
         # Categorical columns → mode
         for col in self.schema.get("categorical", []):
-            if col not in self.df.columns:   # 👈 SKIP if column is missing
+            if col not in self.df.columns:   
                 continue
 
             if self.df[col].isna().sum() > 0:
