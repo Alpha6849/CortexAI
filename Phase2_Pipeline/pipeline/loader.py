@@ -12,13 +12,11 @@ import logging
 import pandas as pd
 from typing import Optional, Tuple
 
-# -----------------------------
+
 # Logger Configuration
-# -----------------------------
 logger = logging.getLogger("DataLoader")
 logger.setLevel(logging.INFO)
 
-# Add console handler ONLY if not already added
 if not logger.handlers:
     console = logging.StreamHandler()
     formatter = logging.Formatter("%(asctime)s - [DataLoader] - %(levelname)s - %(message)s")
@@ -41,9 +39,8 @@ class DataLoader:
     def __init__(self, file_path: str):
         self.file_path = file_path
 
-    # -----------------------------
+ 
     # Validation Helpers
-    # -----------------------------
     def _check_exists(self) -> None:
         logger.info(f"Checking if file exists: {self.file_path}")
         if not os.path.exists(self.file_path):
@@ -63,9 +60,8 @@ class DataLoader:
                 f"File too large ({file_size:.2f} MB). Maximum allowed size is {max_mb} MB."
             )
 
-    # -----------------------------
     # Separator Detection
-    # -----------------------------
+   
     def _detect_separator(self) -> str:
         """
         Detects the most likely separator by reading a small sample.
@@ -83,9 +79,8 @@ class DataLoader:
 
         return best_sep
 
-    # -----------------------------
+
     # Safe CSV Loading
-    # -----------------------------
     def _safe_read_csv(self) -> Tuple[pd.DataFrame, str, str]:
         """
         Attempts to read a CSV using multiple encodings to avoid crashes.
@@ -109,9 +104,8 @@ class DataLoader:
             "Unable to read CSV with common encodings."
         )
 
-    # -----------------------------
+ 
     # Public Load Function
-    # -----------------------------
     def load(self) -> Tuple[pd.DataFrame, dict]:
         """
         Public method to load CSV safely.
@@ -135,9 +129,7 @@ class DataLoader:
         except Exception as e:
             self._raise_error(f"Failed to load CSV: {e}")
 
-    # -----------------------------
     # Metadata Builder
-    # -----------------------------
     def _build_metadata(self, df: pd.DataFrame, encoding: str, sep: str) -> dict:
         file_size_mb = os.path.getsize(self.file_path) / (1024 * 1024)
 
@@ -150,16 +142,11 @@ class DataLoader:
             "separator_used": sep,
         }
 
-    # -----------------------------
-    # Error Helper
-    # -----------------------------
+
     def _raise_error(self, message: str):
         logger.error(message)
         raise ValueError(message)
 
-    # -----------------------------
-    # Convenience Method
-    # -----------------------------
     def load_df(self) -> pd.DataFrame:
         df, _ = self.load()
         return df
