@@ -43,9 +43,8 @@ class DataCleaner:
         self._handle_missing_values()
 
         logger.info("Cleaning pipeline completed.")
-
-        # Reset index BEFORE returning
         return self.df.reset_index(drop=True)
+
 
 
 
@@ -66,11 +65,14 @@ class DataCleaner:
         
         
     def _handle_missing_values(self):
-        
+        """Fill missing values based on column types."""
         missing_info = {}
 
         # Numeric columns → median
         for col in self.schema.get("numeric", []):
+            if col not in self.df.columns:   # 👈 SKIP if column was removed
+                continue
+
             if self.df[col].isna().sum() > 0:
                 median_val = self.df[col].median()
                 self.df[col].fillna(median_val, inplace=True)
@@ -78,6 +80,9 @@ class DataCleaner:
 
         # Categorical columns → mode
         for col in self.schema.get("categorical", []):
+            if col not in self.df.columns:   # 👈 SKIP if column is missing
+                continue
+
             if self.df[col].isna().sum() > 0:
                 mode_val = self.df[col].mode().iloc[0]
                 self.df[col].fillna(mode_val, inplace=True)
@@ -88,3 +93,4 @@ class DataCleaner:
             self.report["missing_values"] = missing_info
         else:
             logger.info("No missing values detected.")
+

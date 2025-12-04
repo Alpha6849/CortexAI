@@ -29,15 +29,10 @@ try:
     print("Cleaner Report:", cleaner.report)
     
     print_section("Running Cleaner")
-    print_section("Running Cleaner")
     
     cleaned_df = cleaner.clean()
     print(cleaned_df.head())
     print("\nCleaning Report:", cleaner.report)
-
-    print("\nCleaning Report:", cleaner.report)
-
-
 
 
 except Exception as e:
