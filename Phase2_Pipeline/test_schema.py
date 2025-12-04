@@ -37,6 +37,10 @@ try:
 
     print_section("Detecting Target Column")
     print(schema._detect_target_column())
+    
+    print_section("Full Schema Detection")
+    print(schema.detect())
+
 
 
 except Exception as e:

@@ -158,6 +158,24 @@ class SchemaDetector:
         # If nothing matches
         logger.warning("No clear target column detected.")
         return None
+    
+    def detect(self) -> Dict:
+        """
+        a dictionary containing detected schema information.
+        """
+        logger.info("Starting schema detection...")
+
+        schema = {
+            "numeric": self._detect_numeric_columns(),
+            "categorical": self._detect_categorical_columns(),
+            "datetime": self._detect_datetime_columns(),
+            "id_columns": self._detect_id_columns(),
+            "target": self._detect_target_column()
+        }
+
+        logger.info(f"Schema detection complete: {schema}")
+        return schema
+
 
 
 
