@@ -145,7 +145,7 @@ class SchemaDetector:
         # Unique values heuristic
         unique_counts = {col: self.df[col].nunique() for col in self.df.columns}
 
-        # Find columns with low unique values , since it may detect classification
+        # columns with low unique values , since it may detect classification
         classification_candidates = [
             col for col, uniq in unique_counts.items()
             if 2 <= uniq <= 20 and self.df[col].dtype == "object"
@@ -155,7 +155,7 @@ class SchemaDetector:
             logger.info(f"Target column detected via unique-value heuristic: {classification_candidates[0]}")
             return classification_candidates[0]
 
-        # If nothing matches, return None
+        # If nothing matches
         logger.warning("No clear target column detected.")
         return None
 

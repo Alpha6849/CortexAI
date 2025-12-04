@@ -40,6 +40,6 @@ try:
 
 
 except Exception as e:
-    print("\n❌ Error in schema test:")
+    print("\n Error in schema test:")
     print(e)
 
