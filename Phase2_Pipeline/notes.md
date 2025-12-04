@@ -166,5 +166,59 @@ Returns unified schema dictionary formatted as:
     "target": "Species"
 }
 
+### Module: `pipeline/cleaner.py`
+
+Implemented a fully automated and production-grade data cleaning pipeline that prepares any CSV dataset for machine learning.
+
+####  Features Implemented
+
+| Step                       | Description                                                                          |
+| -------------------------- | ------------------------------------------------------------------------------------ |
+| ID column removal          | Automatically detects identifier columns (regex + uniqueness) and removes them       |
+| Missing value handling     | Numeric → median fill, Categorical → mode fill                                       |
+| Type casting               | Ensures numeric/categorical/datetime columns have correct data types based on schema |
+| Outlier detection          | Detects and corrects extreme numeric values using IQR method                         |
+| High-cardinality detection | Flags categorical columns with too many unique categories (>20)                      |
+| Cleaning report            | Summarized all operations into a structured dictionary for UI & logs                 |
+
+####  Return Format
+
+```python
+cleaned_df, cleaning_report = cleaner.clean()
+```
+
+* `cleaned_df` → final preprocessed DataFrame
+* `cleaning_report` → dictionary of actions taken during cleaning
+
+####  Why this matters
+
+This module takes raw CSV data directly from users, and makes it:
+
+* Reliable
+* Model-ready
+* Documentation-friendly
+* UI-compatible
+
+It protects the pipeline from:
+
+* Wrong dtypes
+* Missing values
+* Exploding encoders
+* Hidden outliers
+* Poor training accuracy
+
+---
+
+
+###  Key Learning Notes (Quick)
+
+* Schema defines truth → CSV is untrusted
+* Clean before visualize/train → never after
+* Every data transformation must be **logged**
+* Index reset after dropping columns is required to avoid pandas alignment bugs
+
+
+
+
 
 
