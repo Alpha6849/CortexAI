@@ -38,9 +38,11 @@ class DataCleaner:
 
         self._drop_id_columns()
         self._handle_missing_values()
+        self._fix_column_types()   
 
         logger.info("Cleaning pipeline completed.")
         return self.df.reset_index(drop=True)
+
 
 
     def _drop_id_columns(self):
@@ -87,4 +89,46 @@ class DataCleaner:
             self.report["missing_values"] = missing_info
         else:
             logger.info("No missing values detected.")
+            
+            
+    def _fix_column_types(self):
+        """Ensure columns have correct dtypes based on schema."""
+        type_changes = {}
+
+        # Numeric columns
+        for col in self.schema.get("numeric", []):
+            if col not in self.df.columns:
+                continue
+            try:
+                self.df[col] = pd.to_numeric(self.df[col], errors="coerce")
+                type_changes[col] = "to_numeric"
+            except Exception:
+                continue
+
+        # Categorical columns
+        for col in self.schema.get("categorical", []):
+            if col not in self.df.columns:
+                continue
+            try:
+                self.df[col] = self.df[col].astype(str)
+                type_changes[col] = "to_string"
+            except Exception:
+                continue
+
+        # Datetime columns
+        for col in self.schema.get("datetime", []):
+            if col not in self.df.columns:
+                continue
+            try:
+                self.df[col] = pd.to_datetime(self.df[col], errors="coerce")
+                type_changes[col] = "to_datetime"
+            except Exception:
+                continue
+
+        if type_changes:
+            logger.info(f"Column types fixed: {type_changes}")
+            self.report["type_casting"] = type_changes
+        else:
+            logger.info("No type changes required.")
+
 
