@@ -38,7 +38,8 @@ class DataCleaner:
 
         self._drop_id_columns()
         self._handle_missing_values()
-        self._fix_column_types()   
+        self._fix_column_types()  
+        self._fix_outliers() 
 
         logger.info("Cleaning pipeline completed.")
         return self.df.reset_index(drop=True)
@@ -130,5 +131,38 @@ class DataCleaner:
             self.report["type_casting"] = type_changes
         else:
             logger.info("No type changes required.")
+            
+            
+    def _fix_outliers(self):
+        """Detect and correct outliers using the IQR rule."""
+        outlier_info = {}
+
+        for col in self.schema.get("numeric", []):
+            if col not in self.df.columns:
+                continue
+
+            Q1 = self.df[col].quantile(0.25)
+            Q3 = self.df[col].quantile(0.75)
+            IQR = Q3 - Q1
+
+            lower_bound = Q1 - 1.5 * IQR
+            upper_bound = Q3 + 1.5 * IQR
+
+            # Check if outliers exist
+            outliers = self.df[(self.df[col] < lower_bound) | (self.df[col] > upper_bound)]
+
+            if len(outliers) > 0:
+                median_val = self.df[col].median()
+                self.df.loc[self.df[col] < lower_bound, col] = median_val
+                self.df.loc[self.df[col] > upper_bound, col] = median_val
+
+                outlier_info[col] = f"{len(outliers)} outliers replaced with median ({median_val})"
+
+        if outlier_info:
+            logger.info(f"Outliers handled: {outlier_info}")
+            self.report["outliers"] = outlier_info
+        else:
+            logger.info("No outliers detected.")
+
 
 
