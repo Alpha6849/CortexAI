@@ -15,15 +15,20 @@ The goal is to build a modular pipeline that can be expanded with LLM reasoning 
 ## 📌 Project Structure
 ```text
 
-Cortex AI/
+Cortex AI /
 │
-├── Phase1_AutoML_EDA/
-├── (future) Phase2_LLM_Agent/
-├── (future) Phase3_DL_Agent/
-├── (future) Phase4_Deployment/
+├── Phase1_AutoML_EDA/        # Completed — Notebook-based AutoML Engine
+│
+├── Phase2_Pipeline/          # In Progress — Production Code + Streamlit UI
+│   └── pipeline/             # Loader, Schema, Cleaner, EDA, Trainer modules
+│
+├── (future) Phase3_DL_Agent/ # Deep Learning Models + Explainability Agents
+│
+├── (future) Phase4_Deployment/ # Cloud Deploy 
 │
 ├── LICENSE
-└── README.md
+└── README.md                 
+
 
 ```
 

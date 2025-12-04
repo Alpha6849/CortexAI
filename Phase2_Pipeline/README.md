@@ -18,15 +18,20 @@ This phase includes:
 Phase2_Pipeline/
 │
 ├── pipeline/
-│ ├── loader.py # CSV loading and validation
-│ ├── schema.py # Auto schema detection
-│ ├── cleaner.py # Production cleaning engine
-│ ├── eda.py # Automated EDA engine
-│ ├── trainer.py # Model training + selection
-│ └── init.py
+│   ├── loader.py        # Safe CSV loading + validation
+│   ├── schema.py        # Column type + ID + target detection
+│   ├── cleaner.py       # Automated data cleaning engine
+│   ├── eda.py           # (To build) Automated EDA module
+│   ├── trainer.py       # (To build) ML model training + evaluation
+│   └── __init__.py      # Makes this a Python package
 │
-├── README.md
-└── notes.md
+├── test_loader.py       # Module tester (Loader)
+├── test_schema.py       # Module tester (Schema)
+├── test_cleaner.py      # Module tester (Cleaner)
+│
+├── README.md            # Phase 2 documentation + usage
+└── notes.md             # Engineering notes & progress logs
+
 
 ```
 
