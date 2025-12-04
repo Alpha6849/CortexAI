@@ -40,6 +40,7 @@ class DataCleaner:
         self._handle_missing_values()
         self._fix_column_types()  
         self._fix_outliers() 
+        self._detect_high_cardinality()
 
         logger.info("Cleaning pipeline completed.")
         return self.df.reset_index(drop=True)
@@ -163,6 +164,26 @@ class DataCleaner:
             self.report["outliers"] = outlier_info
         else:
             logger.info("No outliers detected.")
+            
+    def _detect_high_cardinality(self):
+        """Detect categorical columns with too many unique values."""
+        high_card_cols = {}
+
+        for col in self.schema.get("categorical", []):
+            if col not in self.df.columns:
+                continue
+
+            unique_count = self.df[col].nunique()
+
+            if unique_count > 20:
+                high_card_cols[col] = unique_count
+
+        if high_card_cols:
+            logger.info(f"High-cardinality categorical columns: {high_card_cols}")
+            self.report["high_cardinality"] = high_card_cols
+        else:
+            logger.info("No high-cardinality categorical columns.")
+
 
 
 
