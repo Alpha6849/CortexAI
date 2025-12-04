@@ -35,6 +35,56 @@ class DataCleaner:
 
     def clean(self) -> pd.DataFrame:
         """
-        Main cleaning pipeline 
+        Run cleaning steps in correct order.
         """
-        raise NotImplementedError("clean() not implemented yet.")
+        logger.info("Starting data cleaning pipeline...")
+
+        self._drop_id_columns()
+        self._handle_missing_values()
+
+        logger.info("Cleaning pipeline completed.")
+
+        # Reset index BEFORE returning
+        return self.df.reset_index(drop=True)
+
+
+
+    
+    def _drop_id_columns(self):
+        """Remove ID columns based on schema. , or else model acc = 100% cause it will use labels to detect"""
+        id_cols = self.schema.get("id_columns", [])
+
+        if not id_cols:
+            logger.info("No ID columns to remove.")
+            return
+
+        self.df.drop(columns=id_cols, inplace=True)
+        logger.info(f"Removed ID columns: {id_cols}")
+
+        # Save in cleaning report
+        self.report["removed_id_columns"] = id_cols
+        
+        
+    def _handle_missing_values(self):
+        
+        missing_info = {}
+
+        # Numeric columns → median
+        for col in self.schema.get("numeric", []):
+            if self.df[col].isna().sum() > 0:
+                median_val = self.df[col].median()
+                self.df[col].fillna(median_val, inplace=True)
+                missing_info[col] = f"filled with median ({median_val})"
+
+        # Categorical columns → mode
+        for col in self.schema.get("categorical", []):
+            if self.df[col].isna().sum() > 0:
+                mode_val = self.df[col].mode().iloc[0]
+                self.df[col].fillna(mode_val, inplace=True)
+                missing_info[col] = f"filled with mode ({mode_val})"
+
+        if missing_info:
+            logger.info(f"Missing values handled: {missing_info}")
+            self.report["missing_values"] = missing_info
+        else:
+            logger.info("No missing values detected.")
