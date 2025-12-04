@@ -33,18 +33,21 @@ class DataCleaner:
         self.schema = schema
         self.report = {}  # store cleaning summary
 
-    def clean(self) -> pd.DataFrame:
+    def clean(self):
         logger.info("Starting data cleaning pipeline...")
 
         self._drop_id_columns()
         self._handle_missing_values()
-        self._fix_column_types()  
-        self._fix_outliers() 
+        self._fix_column_types()
+        self._fix_outliers()
         self._detect_high_cardinality()
 
         logger.info("Cleaning pipeline completed.")
-        return self.df.reset_index(drop=True)
 
+        cleaned_df = self.df.reset_index(drop=True)
+        report = self._generate_report()
+
+        return cleaned_df, report
 
 
     def _drop_id_columns(self):
@@ -183,6 +186,19 @@ class DataCleaner:
             self.report["high_cardinality"] = high_card_cols
         else:
             logger.info("No high-cardinality categorical columns.")
+            
+    def _generate_report(self) -> Dict:
+        """
+        Returns structured cleaning actions for UI/pipeline.
+        """
+        return {
+            "removed_id_columns": self.report.get("removed_id_columns", []),
+            "missing_values": self.report.get("missing_values", {}),
+            "type_casting": self.report.get("type_casting", {}),
+            "outliers": self.report.get("outliers", {}),
+            "high_cardinality": self.report.get("high_cardinality", {})
+        }
+
 
 
 

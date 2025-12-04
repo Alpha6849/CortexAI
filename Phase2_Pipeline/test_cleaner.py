@@ -30,7 +30,7 @@ try:
     
     print_section("Running Cleaner")
     
-    cleaned_df = cleaner.clean()
+    cleaned_df, report = cleaner.clean()
     print(cleaned_df.head())
     print("\nCleaning Report:", cleaner.report)
 
