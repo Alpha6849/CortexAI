@@ -15,4 +15,9 @@ cleaned_df, report = DataCleaner(df, schema).clean()
 eda = EDAEngine(cleaned_df, schema)
 stats = eda.generate_basic_statistics()
 
+target_info = eda.analyze_target_column()
+print("\nTarget Analysis:")
+pprint.pprint(target_info)
+
+
 pprint.pprint(stats)
