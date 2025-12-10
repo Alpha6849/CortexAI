@@ -98,6 +98,35 @@ class EDAEngine:
         logger.info(f"Target analysis complete: {result}")
 
         return result
+    
+    def analyze_numeric_columns(self) -> Dict:
+        """
+        (hist & boxplot suggestion).
+        """
+        numeric_cols = [
+            col for col in self.schema.get("numeric", [])
+            if col in self.df.columns
+        ]
+
+        numeric_info = {}
+
+        for col in numeric_cols:
+            col_data = self.df[col]
+            numeric_info[col] = {
+                "mean": float(col_data.mean()),
+                "median": float(col_data.median()),
+                "std": float(col_data.std()),
+                "min": float(col_data.min()),
+                "max": float(col_data.max()),
+                "skewness": float(col_data.skew()),
+                "suggest_plots": ["hist", "box"]
+            }
+
+        self.report["numeric_analysis"] = numeric_info
+        logger.info("Numeric column analysis completed.")
+
+        return numeric_info
+
 
 
 
