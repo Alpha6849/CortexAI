@@ -67,5 +67,37 @@ class EDAEngine:
         logger.info("Basic statistics generated.")
 
         return stats
+    
+    def analyze_target_column(self) -> Dict:
+       
+        target_col = self.schema.get("target")
+        if not target_col or target_col not in self.df.columns:
+            logger.warning("No target column found in dataframe.")
+            return {}
+
+        target_data = self.df[target_col]
+        result = {"target_column": target_col}
+
+        # Classification case 
+        if target_data.dtype == "object" or target_data.nunique() <= 20:
+            value_counts = target_data.value_counts().to_dict()
+            result["type"] = "classification"
+            result["class_distribution"] = value_counts
+
+        # Regression case 
+        else:
+            result["type"] = "regression"
+            result["summary"] = {
+                "min": float(target_data.min()),
+                "max": float(target_data.max()),
+                "mean": float(target_data.mean()),
+                "std": float(target_data.std()),
+            }
+
+        self.report["target_analysis"] = result
+        logger.info(f"Target analysis complete: {result}")
+
+        return result
+
 
 
