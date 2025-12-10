@@ -93,7 +93,7 @@ This module ensures CSV files are handled professionally for real-world usage in
 
 ---
 
-## 📊 Test Script Created: `test_loader.py`
+##  Test Script Created: `test_loader.py`
 A standalone test file verifies loader behavior:
 
 - Loads real CSV  
@@ -101,13 +101,6 @@ A standalone test file verifies loader behavior:
 - Prints metadata  
 - Shows first 5 rows  
 - Catches and prints errors cleanly  
-
-This file sits **outside** the `pipeline/` folder.
-
----
-
-##  Next Steps
-The next pipeline module to implement:
 
 ### ** schema.py — Automatic schema detection**
 
@@ -123,7 +116,7 @@ This will include:
 
 ##  Module: schema.py — Core Detection Completed (3/12/25 + 4/12/25)
 
-### 🔹 Overview
+###  Overview
 The SchemaDetector module converts raw DataFrames into clear schema metadata,
 enabling downstream AutoML components (cleaner, EDA, trainer, UI, LLM insights)
 to understand how to treat each column.
@@ -228,12 +221,47 @@ This engine is now the **reliable backbone** of all future pipeline steps.
 
 ---
 
-###  Key Learnings
+##  Phase 2 — EDA Module Completed (8/12/25 + 9/12/25 + 10/12/25)
 
-- Schema defines truth → CSV is *untrusted*
-- Always clean before visualize/train
-- Reset index after dropping columns to avoid pandas alignment errors
-- Every transformation must be **recorded** for users
+### File: `pipeline/eda.py`
+
+ built an **EDA engine** that understands the dataset automatically.
+
+#### What it does
+
+| Task | Purpose |
+|------|---------|
+| Count rows & columns | Know dataset size |
+| Check data types | Numeric vs category |
+| Show missing values | See what needs fixing |
+| Category counts | Check distribution of target |
+| Numeric stats | Mean, median, min/max |
+| Detect target type | Classification or regression |
+| Correlation check | Find related features |
+| Plot suggestions | Hist, box, scatter |
+| Final EDA report | One dictionary for UI + logs + LLM |
+
+####  Output
+
+```python
+report = eda.generate_report()
+```
+
+This gives one clean dictionary of all insights:
+- Shape of data
+- Missing values
+- Target analysis
+- Numeric column behavior
+- Strong correlations
+- Plot suggestions
+
+- UI knows which plots to show
+- Trainer knows which features are useful
+- LLM can explain the dataset clearly
+- Users understand their data quickly
 
 ---
+
+
+
 
