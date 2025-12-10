@@ -197,6 +197,29 @@ class EDAEngine:
         self.report["numeric_analysis"] = numeric_info
         logger.info("Plot suggestions refined using skewness & correlations.")
         return numeric_info
+    
+    def generate_report(self) -> Dict:
+        """
+        full EDA insights report.
+        """
+        if "basic_statistics" not in self.report:
+            self.generate_basic_statistics()
+
+        if "target_analysis" not in self.report:
+            self.analyze_target_column()
+
+        if "numeric_analysis" not in self.report:
+            self.analyze_numeric_columns()
+
+        if "correlation_matrix" not in self.report:
+            self.analyze_correlations()
+
+        # refining after the above are computed
+        self.refine_plot_suggestions()
+
+        logger.info("Final EDA report generated.")
+        return self.report
+
 
 
 
