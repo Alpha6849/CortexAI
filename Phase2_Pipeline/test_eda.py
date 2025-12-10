@@ -19,5 +19,10 @@ target_info = eda.analyze_target_column()
 print("\nTarget Analysis:")
 pprint.pprint(target_info)
 
+numeric_info = eda.analyze_numeric_columns()
+print("\nNumeric Analysis:")
+pprint.pprint(numeric_info)
+
+
 
 pprint.pprint(stats)
