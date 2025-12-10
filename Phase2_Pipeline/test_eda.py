@@ -31,6 +31,11 @@ refined = eda.refine_plot_suggestions()
 print("\nRefined Plot Suggestions:")
 pprint.pprint(refined)
 
+final_report = eda.generate_report()
+print("\nFinal EDA Report:")
+pprint.pprint(final_report)
+
+
 
 
 
