@@ -126,6 +126,45 @@ class EDAEngine:
         logger.info("Numeric column analysis completed.")
 
         return numeric_info
+    
+    def analyze_correlations(self) -> Dict:
+        """
+        Analyze numeric column correlations to detect multicollinearity.
+        """
+        numeric_cols = [
+            col for col in self.schema.get("numeric", [])
+            if col in self.df.columns
+        ]
+
+        if len(numeric_cols) < 2:
+            logger.info("Not enough numeric columns for correlation analysis.")
+            return {}
+
+        corr_matrix = self.df[numeric_cols].corr().round(3)
+        high_corr_pairs = {}
+
+        # Check pairs (i < j) to avoid duplicates
+        for i in range(len(numeric_cols)):
+            for j in range(i + 1, len(numeric_cols)):
+                col1, col2 = numeric_cols[i], numeric_cols[j]
+                corr_value = abs(corr_matrix.loc[col1, col2])
+
+                if corr_value >= 0.8:  # Threshold for high correlation
+                    high_corr_pairs[f"{col1} & {col2}"] = corr_matrix.loc[col1, col2]
+
+        self.report["correlation_matrix"] = corr_matrix.to_dict()
+        self.report["high_correlation_pairs"] = high_corr_pairs
+
+        if high_corr_pairs:
+            logger.info(f"High correlations detected: {high_corr_pairs}")
+        else:
+            logger.info("No high-correlation feature pairs found.")
+
+        return {
+            "matrix": corr_matrix.to_dict(),
+            "high_pairs": high_corr_pairs
+        }
+
 
 
 

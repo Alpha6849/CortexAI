@@ -23,6 +23,11 @@ numeric_info = eda.analyze_numeric_columns()
 print("\nNumeric Analysis:")
 pprint.pprint(numeric_info)
 
+corr_info = eda.analyze_correlations()
+print("\nCorrelation Info:")
+pprint.pprint(corr_info)
+
+
 
 
 pprint.pprint(stats)
