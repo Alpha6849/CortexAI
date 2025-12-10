@@ -164,6 +164,40 @@ class EDAEngine:
             "matrix": corr_matrix.to_dict(),
             "high_pairs": high_corr_pairs
         }
+        
+    def refine_plot_suggestions(self):
+        """
+        Enhance plot suggestions using skewness + correlation insights.
+        """
+        numeric_info = self.report.get("numeric_analysis", {})
+        high_corr = self.report.get("high_correlation_pairs", {})
+
+        # If no numeric info exists, skip refinement
+        if not numeric_info:
+            return
+
+        for col, info in numeric_info.items():
+            # Skewness-based suggestions
+            skew = info.get("skewness", 0)
+            if abs(skew) > 1:
+                info["insight"] = "Highly skewed distribution — consider transformation"
+                if "box" not in info["suggest_plots"]:
+                    info["suggest_plots"].append("box")
+
+        # Correlation-based plot suggestions
+        for pair, corr_val in high_corr.items():
+            col1, col2 = pair.split(" & ")
+
+            if col1 in numeric_info:
+                numeric_info[col1]["suggest_plots"].append(f"scatter_with:{col2}")
+
+            if col2 in numeric_info:
+                numeric_info[col2]["suggest_plots"].append(f"scatter_with:{col1}")
+
+        self.report["numeric_analysis"] = numeric_info
+        logger.info("Plot suggestions refined using skewness & correlations.")
+        return numeric_info
+
 
 
 
