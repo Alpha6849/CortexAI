@@ -27,6 +27,11 @@ corr_info = eda.analyze_correlations()
 print("\nCorrelation Info:")
 pprint.pprint(corr_info)
 
+refined = eda.refine_plot_suggestions()
+print("\nRefined Plot Suggestions:")
+pprint.pprint(refined)
+
+
 
 
 
