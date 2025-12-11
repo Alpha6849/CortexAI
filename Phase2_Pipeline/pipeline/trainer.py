@@ -119,6 +119,15 @@ class ModelTrainer:
                 "RandomForestRegressor": RandomForestRegressor()
             }
 
+            # Try adding XGBoost Regressor
+            try:
+                from xgboost import XGBRegressor
+                models["XGBoostRegressor"] = XGBRegressor()
+                logger.info("XGBoostRegressor added to model list.")
+            except Exception as e:
+                logger.warning(f"XGBoostRegressor not available: {e}")
+
+
         for name, model in models.items():
             logger.info(f"Training model: {name}")
 
