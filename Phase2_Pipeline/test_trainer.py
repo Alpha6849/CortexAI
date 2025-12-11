@@ -23,3 +23,11 @@ trainer = ModelTrainer(cleaned_df, schema)
 prep = trainer.prepare_data()
 print("\nPrepare Data Output:")
 pprint.pprint(prep)
+
+print("\n=== Training All Models ===\n")
+results = trainer.train_all_models()
+pprint.pprint(results)
+
+print("\nBest Model:", trainer.best_model)
+print("Best Score:", trainer.best_score)
+
