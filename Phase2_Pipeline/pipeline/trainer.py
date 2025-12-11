@@ -77,4 +77,58 @@ class ModelTrainer:
             "test_shape": self.X_test.shape,
             "task_type": self.task_type
         }
+        
+    def train_all_models(self):
+        """Training multiple models and find the best one."""
+        logger.info("Starting model training...")
+
+        
+        from sklearn.linear_model import LogisticRegression, LinearRegression
+        from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+        from sklearn.svm import SVC
+        from sklearn.neighbors import KNeighborsClassifier
+        from sklearn.metrics import accuracy_score, r2_score
+
+        models = {}
+
+        # Classification Models
+        if self.task_type == "classification":
+            models = {
+                "LogisticRegression": LogisticRegression(max_iter=500),
+                "RandomForestClassifier": RandomForestClassifier(),
+                "SVC": SVC(),
+                "KNN": KNeighborsClassifier()
+            }
+
+        # Regression Models
+        else:
+            models = {
+                "LinearRegression": LinearRegression(),
+                "RandomForestRegressor": RandomForestRegressor()
+            }
+
+        for name, model in models.items():
+            logger.info(f"Training model: {name}")
+
+            model.fit(self.X_train, self.y_train)
+
+            preds = model.predict(self.X_test)
+
+            #  metric
+            if self.task_type == "classification":
+                score = accuracy_score(self.y_test, preds)
+            else:
+                score = r2_score(self.y_test, preds)
+
+            logger.info(f"{name} Score: {score}")
+            self.results[name] = score
+
+            # Track best model
+            if score > self.best_score:
+                self.best_score = score
+                self.best_model = model
+                logger.info(f"New best model: {name} (score={score})")
+
+        return self.results
+
 
