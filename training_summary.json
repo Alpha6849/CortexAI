@@ -1,0 +1,11 @@
+{
+    "task_type": "classification",
+    "scores": {
+        "LogisticRegression": 1.0,
+        "RandomForestClassifier": 1.0,
+        "SVC": 1.0,
+        "KNN": 1.0
+    },
+    "best_score": 1.0,
+    "best_model_type": "LogisticRegression"
+}

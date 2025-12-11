@@ -31,3 +31,11 @@ pprint.pprint(results)
 print("\nBest Model:", trainer.best_model)
 print("Best Score:", trainer.best_score)
 
+print("\n=== Saving Model & Summary ===")
+
+model_path = trainer.save_best_model("best_model.pkl")
+summary = trainer.save_training_summary("training_summary.json")
+
+print("Model saved to:", model_path)
+print("Summary:")
+pprint.pprint(summary)
