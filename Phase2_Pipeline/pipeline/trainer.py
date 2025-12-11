@@ -130,5 +130,34 @@ class ModelTrainer:
                 logger.info(f"New best model: {name} (score={score})")
 
         return self.results
+    
+    def save_best_model(self, output_path: str = "best_model.pkl"):
+        """Saving best model as pickle."""
+        import joblib
+        if self.best_model is None:
+            raise ValueError("No trained model to save. Run train_all_models() first.")
+
+        joblib.dump(self.best_model, output_path)
+        logger.info(f"Best model saved to {output_path}")
+        return output_path
+
+
+    def save_training_summary(self, output_path: str = "training_summary.json"):
+        """ results as JSON."""
+        import json
+
+        summary = {
+            "task_type": self.task_type,
+            "scores": self.results,
+            "best_score": self.best_score,
+            "best_model_type": type(self.best_model).__name__
+        }
+
+        with open(output_path, "w") as f:
+            json.dump(summary, f, indent=4)
+
+        logger.info(f"Training summary saved to {output_path}")
+        return summary
+
 
 
