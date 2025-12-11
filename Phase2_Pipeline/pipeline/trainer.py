@@ -100,6 +100,18 @@ class ModelTrainer:
                 "KNN": KNeighborsClassifier()
             }
 
+            # Try adding XGBoost
+            try:
+                from xgboost import XGBClassifier
+                models["XGBoost"] = XGBClassifier(
+                    eval_metric="mlogloss",
+                    use_label_encoder=False
+                )
+                logger.info("XGBoostClassifier added to model list.")
+            except Exception as e:
+                logger.warning(f"XGBoost not available: {e}")
+
+
         # Regression Models
         else:
             models = {
