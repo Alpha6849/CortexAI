@@ -23,7 +23,7 @@ This uses the **production DataLoader class**.
 uploaded = st.file_uploader("Upload CSV", type=["csv"])
 
 if uploaded:
-    # Save temporary file for DataLoader
+    # temporary file for DataLoader
     temp_path = os.path.join(APP_DIR, "_temp_upload.csv")
     with open(temp_path, "wb") as f:
         f.write(uploaded.getbuffer())
