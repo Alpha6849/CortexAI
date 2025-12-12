@@ -18,3 +18,7 @@ Phase1_AutoML_EDA/results/
 # Model binaries
 *.pkl
 *.sav
+
+.env
+.streamlit/secrets.toml
+
