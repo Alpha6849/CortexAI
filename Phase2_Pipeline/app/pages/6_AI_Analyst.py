@@ -14,9 +14,7 @@ import streamlit as st
 from dotenv import load_dotenv
 import requests
 
-# ----------------------------
-# Load API key
-# ----------------------------
+
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -37,9 +35,9 @@ if GROQ_API_KEY is None:
     st.warning("⚠️ No Groq API key found. Add GROQ_API_KEY in .env or Streamlit secrets.")
     
 
-# ----------------------------
+
 # Prompt Templates (Simple + Pro)
-# ----------------------------
+
 SIMPLE_PROMPT = (
     "You are a data analyst.\n"
     "Return ONLY a single valid JSON object.\n"
@@ -67,10 +65,8 @@ PRO_PROMPT = (
 )
 
 
-
-# ----------------------------
 # Groq API Call
-# ----------------------------
+
 def call_groq(messages, model="llama-3.1-8b-instant", temperature=0.0, max_tokens=1200):
     if GROQ_API_KEY is None:
         raise RuntimeError("GROQ_API_KEY not configured.")
@@ -94,10 +90,8 @@ def call_groq(messages, model="llama-3.1-8b-instant", temperature=0.0, max_token
     resp.raise_for_status()
     return resp.json()
 
-
-# ----------------------------
 # Helpers
-# ----------------------------
+
 def collect_session_reports():
     """Gather pipeline reports stored across pages."""
     reports = {}
@@ -137,11 +131,8 @@ def extract_json_from_text(text: str):
         return None
 
 
-
-
-# ----------------------------
 # Streamlit UI
-# ----------------------------
+
 st.set_page_config(page_title="AI Analyst — CortexAI", layout="wide")
 st.title("🧠 AI Analyst (Groq-powered)")
 st.caption("Generates insights, explanations, and structured JSON for your dataset.")
@@ -165,9 +156,9 @@ custom_question = st.text_area("Optional: Ask a custom question to the analyst",
 user_json = json.dumps(reports, indent=2)
 
 
-# ----------------------------
+
 # ANALYZE BUTTON
-# ----------------------------
+
 if st.button("Generate Analysis"):
     if GROQ_API_KEY is None:
         st.error("Missing GROQ_API_KEY. Add it to .env and restart.")
