@@ -2,15 +2,16 @@
 usage_manager.py
 
 Central plan & usage tracking for CortexAI.
-Used to enforce Free / Pro feature limits.
+Supports Free / Pro plans and Developer override.
 """
 
 import streamlit as st
 
+# --------------------------------------------------
+# CONFIG
+# --------------------------------------------------
 
-# --------------------------------------------------
-# PLAN DEFINITIONS
-# --------------------------------------------------
+DEVELOPER_MODE = True   # 🔥 SET TRUE FOR YOU, FALSE IN PRODUCTION
 
 PLAN_LIMITS = {
     "free": {
@@ -27,18 +28,14 @@ PLAN_LIMITS = {
     }
 }
 
-
 # --------------------------------------------------
-# INITIALIZATION
+# INIT
 # --------------------------------------------------
 
 def init_plan_and_usage():
-    """
-    Initialize plan and usage counters in session state.
-    Safe to call on every page.
-    """
     if "plan" not in st.session_state:
         st.session_state["plan"] = "free"
+
 
     if "usage" not in st.session_state:
         st.session_state["usage"] = {
@@ -47,41 +44,49 @@ def init_plan_and_usage():
             "llm_calls": 0
         }
 
+    if "is_admin" not in st.session_state:
+        st.session_state["is_admin"] = DEVELOPER_MODE
 
 # --------------------------------------------------
 # HELPERS
 # --------------------------------------------------
 
 def get_current_plan():
-    return st.session_state.get("plan", "free")
+    return "pro" if st.session_state.get("is_admin") else st.session_state.get("plan", "free")
 
 
 def get_plan_limits():
-    plan = get_current_plan()
-    return PLAN_LIMITS.get(plan, PLAN_LIMITS["free"])
+    return PLAN_LIMITS[get_current_plan()]
 
 
 def increment_usage(key: str):
-    if "usage" not in st.session_state:
-        init_plan_and_usage()
+    if st.session_state.get("is_admin"):
+        return  # 👑 admin bypass
 
     st.session_state["usage"][key] += 1
 
 
 def check_limit(key: str):
-    """
-    Returns True if usage is allowed, False otherwise.
-    """
+    if st.session_state.get("is_admin"):
+        return True  # 👑 unlimited
+
     limits = get_plan_limits()
     usage = st.session_state.get("usage", {})
-
     return usage.get(key, 0) < limits.get(f"{key}_per_session", 0)
 
 
 def enforce_limit(key: str, message: str):
-    """
-    Hard stop if usage exceeded.
-    """
     if not check_limit(key):
         st.error(message)
         st.stop()
+
+
+def get_usage_snapshot():
+    limits = get_plan_limits()
+    usage = st.session_state.get("usage", {})
+
+    return {
+        "uploads": (usage.get("uploads", 0), limits["uploads_per_session"]),
+        "pipeline_runs": (usage.get("pipeline_runs", 0), limits["pipeline_runs_per_session"]),
+        "llm_calls": (usage.get("llm_calls", 0), limits["llm_calls_per_session"]),
+    }

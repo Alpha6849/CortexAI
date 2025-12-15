@@ -37,7 +37,8 @@ if GROQ_API_KEY is None:
 from pipeline.usage_manager import (
     init_plan_and_usage,
     enforce_limit,
-    increment_usage
+    increment_usage,
+    get_current_plan
 )
 
 init_plan_and_usage()
@@ -77,7 +78,7 @@ PRO_PROMPT = (
 # GROQ API
 # --------------------------------------------------
 
-def call_groq(messages, model="llama-3.1-8b-instant", temperature=0.0, max_tokens=1200):
+def call_groq(messages, model, temperature=0.0, max_tokens=700):
     if GROQ_API_KEY is None:
         raise RuntimeError("GROQ_API_KEY not configured.")
 
@@ -146,13 +147,25 @@ def build_llm_safe_reports(reports: dict) -> dict:
 
 
 def extract_json_from_text(text: str):
+    """
+    Robust JSON extraction.
+    Handles extra text before/after JSON.
+    """
     try:
         cleaned = text.strip()
+
+        if "```" in cleaned:
+            cleaned = cleaned.split("```")[1]
+
         start = cleaned.find("{")
-        end = cleaned.rfind("}") + 1
+        end = cleaned.rfind("}")
+
         if start == -1 or end == -1:
             return None
-        return json.loads(cleaned[start:end])
+
+        candidate = cleaned[start:end + 1]
+        return json.loads(candidate)
+
     except Exception:
         return None
 
@@ -200,7 +213,7 @@ if "dataset_quality" in reports:
 # --------------------------------------------------
 
 temperature = st.slider("Temperature", 0.0, 1.0, 0.0, step=0.05)
-max_tokens = st.number_input("Max Output Tokens", value=1200, min_value=256, max_value=4096)
+max_tokens = st.number_input("Max Output Tokens", value=700, min_value=256, max_value=4096)
 custom_question = st.text_area("Optional: Ask a custom question", height=80)
 
 safe_reports = build_llm_safe_reports(reports)
@@ -223,6 +236,13 @@ if st.button("Generate Analysis"):
 
     increment_usage("llm_calls")
 
+    current_plan = get_current_plan()
+    model_name = (
+        "llama-3.1-8b-instant"
+        if current_plan == "free"
+        else "llama-3.1-70b-versatile"
+    )
+
     prompt = SIMPLE_PROMPT if mode == "Simple" else PRO_PROMPT
 
     messages = [
@@ -240,6 +260,7 @@ if st.button("Generate Analysis"):
         try:
             raw = call_groq(
                 messages,
+                model=model_name,
                 temperature=float(temperature),
                 max_tokens=int(max_tokens)
             )
