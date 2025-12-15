@@ -16,6 +16,16 @@ sys.path.append(PARENT_DIR)
 # --------------------------------------------------
 from pipeline.trainer import ModelTrainer
 from pipeline.quality_analyzer import DatasetQualityAnalyzer
+from pipeline.usage_manager import (
+    init_plan_and_usage,
+    enforce_limit,
+    increment_usage
+)
+
+# --------------------------------------------------
+# Init plan & usage
+# --------------------------------------------------
+init_plan_and_usage()
 
 # --------------------------------------------------
 # Page Title
@@ -50,9 +60,20 @@ st.markdown("""
 """)
 
 # --------------------------------------------------
+# Enforce training run limit BEFORE button
+# --------------------------------------------------
+enforce_limit(
+    key="pipeline_runs",
+    message="🚫 Training limit reached for Free plan. Upgrade to Pro to run more AutoML trainings."
+)
+
+# --------------------------------------------------
 # Training Trigger
 # --------------------------------------------------
 if st.button("🚀 Start AutoML Training"):
+
+    # Increment usage immediately
+    increment_usage("pipeline_runs")
 
     # -----------------------------
     # Initialize Trainer
@@ -136,7 +157,7 @@ if st.button("🚀 Start AutoML Training"):
     summary = trainer.save_training_summary("training_summary.json")
 
     # -----------------------------
-    # Downloads
+    # Downloads (PRO VALUE HOOK)
     # -----------------------------
     st.subheader("⬇️ Downloads")
 
