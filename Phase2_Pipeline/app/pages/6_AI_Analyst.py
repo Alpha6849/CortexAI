@@ -240,7 +240,7 @@ if st.button("Generate Analysis"):
     model_name = (
         "llama-3.1-8b-instant"
         if current_plan == "free"
-        else "llama-3.1-70b-versatile"
+        else "llama3-70b-8192"
     )
 
     prompt = SIMPLE_PROMPT if mode == "Simple" else PRO_PROMPT
