@@ -125,11 +125,11 @@ class SchemaDetector:
             is_numeric = pd.api.types.is_numeric_dtype(self.df[col])
             is_object = self.df[col].dtype == "object"
 
-            # 1️⃣ Weak generic name signal
+            #  Weak generic name signal
             if any(re.search(p, col_lower) for p in generic_target_patterns):
                 score += 3
 
-            # 2️⃣ Binary dominance (core signal)
+            #  Binary dominance (core signal)
             if nunique == 2:
                 score += 6
 
@@ -141,7 +141,7 @@ class SchemaDetector:
                 if is_numeric:
                     score += 1
 
-            # 3️⃣ Small multi-class outcome
+            # Small multi-class outcome
             elif 3 <= nunique <= 10:
                 score += 2
 
@@ -149,7 +149,7 @@ class SchemaDetector:
                 if is_numeric:
                     score -= 2
 
-            # 4️⃣ Penalize feature-like high cardinality
+            #  Penalize feature-like high cardinality
             if nunique > 50:
                 score -= 3
 
