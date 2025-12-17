@@ -159,10 +159,13 @@ def build_llm_safe_reports(reports: dict) -> dict:
     safe = {}
 
     if "schema" in reports:
+        schema = reports["schema"]
         safe["schema"] = {
-            "target": reports["schema"].get("target"),
-            "num_numeric": len(reports["schema"].get("numeric", [])),
-            "num_categorical": len(reports["schema"].get("categorical", []))
+            "target": schema.get("target"),
+            "numeric_columns": schema.get("numeric", []),
+            "categorical_columns": schema.get("categorical", []),
+            "datetime_columns": schema.get("datetime", []),
+            "id_columns": schema.get("id_columns", [])
         }
 
     if "dataset_quality" in reports:
@@ -171,11 +174,14 @@ def build_llm_safe_reports(reports: dict) -> dict:
     if "eda_report" in reports:
         eda = reports["eda_report"]
         safe["eda_summary"] = {
-            "binary_outcomes": eda.get("binary_outcomes", []),
-            "outcome_analysis": eda.get("outcome_analysis", {})
+            "row_count": eda.get("basic_statistics", {}).get("shape", [None, None])[0],
+            "column_count": eda.get("basic_statistics", {}).get("shape", [None, None])[1],
+            "target_analysis": eda.get("target_analysis", {})
         }
 
     return safe
+
+
 
 # --------------------------------------------------
 # STREAMLIT UI

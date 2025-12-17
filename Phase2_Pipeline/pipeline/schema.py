@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from typing import Dict, List, Optional
+from typing import Dict, List
 import logging
 import re
 
@@ -32,12 +32,16 @@ class SchemaDetector:
     # COLUMN TYPE DETECTION
     # --------------------------------------------------
     def _detect_numeric_columns(self) -> List[str]:
-        numeric_cols = self.df.select_dtypes(include=["int64", "float64"]).columns.tolist()
+        numeric_cols = self.df.select_dtypes(
+            include=["int64", "float64"]
+        ).columns.tolist()
         logger.info(f"Numeric columns detected: {numeric_cols}")
         return numeric_cols
 
     def _detect_categorical_columns(self) -> List[str]:
-        categorical_cols = self.df.select_dtypes(include=["object"]).columns.tolist()
+        categorical_cols = self.df.select_dtypes(
+            include=["object"]
+        ).columns.tolist()
         logger.info(f"Categorical columns detected: {categorical_cols}")
         return categorical_cols
 
@@ -48,7 +52,11 @@ class SchemaDetector:
             if pd.api.types.is_numeric_dtype(self.df[col]):
                 continue
             try:
-                parsed = pd.to_datetime(self.df[col], errors="raise", infer_datetime_format=True)
+                parsed = pd.to_datetime(
+                    self.df[col],
+                    errors="raise",
+                    infer_datetime_format=True
+                )
                 if parsed.notna().mean() > 0.5:
                     datetime_cols.append(col)
             except Exception:
@@ -87,42 +95,87 @@ class SchemaDetector:
         return id_cols
 
     # --------------------------------------------------
-    # TARGET COLUMN DETECTION (FIXED)
+    # TARGET COLUMN DETECTION (SCORING BASED)
     # --------------------------------------------------
     def _detect_target_column(self) -> str:
         """
-        Detect target column using:
-        - Name patterns
-        - Classification heuristics
-        - Safe fallback (last column)
+        Domain-agnostic target detection using structural scoring.
+        Handles binary ambiguity safely.
         """
 
-        target_patterns = [
-            r"target", r"label", r"class", r"species",
-            r"outcome", r"result", r"diagnosis", r"churn", r"y$"
+        id_cols = set(self._detect_id_columns())
+
+        generic_target_patterns = [
+            r"\btarget\b", r"\blabel\b", r"\bclass\b",
+            r"\boutcome\b", r"\bresult\b", r"\by$"
         ]
 
-        # 1️⃣ Name-based detection
+        scores = {}
+
         for col in self.df.columns:
+            if col in id_cols:
+                continue
+
+            nunique = self.df[col].nunique()
+            if nunique <= 1:
+                continue
+
+            score = 0
             col_lower = col.lower()
-            if any(re.search(p, col_lower) for p in target_patterns):
-                logger.info(f"Target detected via name match: {col}")
-                return col
+            is_numeric = pd.api.types.is_numeric_dtype(self.df[col])
+            is_object = self.df[col].dtype == "object"
 
-        # 2️⃣ Classification heuristic
-        for col in self.df.columns:
-            if self.df[col].dtype == "object":
-                uniq = self.df[col].nunique()
-                if 2 <= uniq <= 20:
-                    logger.info(f"Target detected via categorical heuristic: {col}")
-                    return col
+            # 1️⃣ Weak generic name signal
+            if any(re.search(p, col_lower) for p in generic_target_patterns):
+                score += 3
 
-        # 3️⃣ FINAL SAFE FALLBACK (IMPORTANT)
-        fallback = self.df.columns[-1]
-        logger.warning(
-            f"No clear target detected. Falling back to last column: {fallback}"
-        )
-        return fallback
+            # 2️⃣ Binary dominance (core signal)
+            if nunique == 2:
+                score += 6
+
+                # Penalize categorical grouping features (e.g., Sex, Gender)
+                if is_object:
+                    score -= 2
+
+                # Prefer encoded numeric binary outcomes (0/1)
+                if is_numeric:
+                    score += 1
+
+            # 3️⃣ Small multi-class outcome
+            elif 3 <= nunique <= 10:
+                score += 2
+
+                # Penalize ordinal numeric encodings
+                if is_numeric:
+                    score -= 2
+
+            # 4️⃣ Penalize feature-like high cardinality
+            if nunique > 50:
+                score -= 3
+
+            scores[col] = score
+            logger.info(f"Target score — {col}: {score}")
+
+        if not scores:
+            raise ValueError("No valid target candidates found.")
+
+        # Sort for transparency
+        sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+
+        # Ambiguity detection
+        if (
+            len(sorted_scores) > 1 and
+            sorted_scores[0][1] - sorted_scores[1][1] <= 1
+        ):
+            logger.warning(
+                f"Ambiguous target detection between "
+                f"{sorted_scores[0][0]} and {sorted_scores[1][0]}"
+            )
+
+        best_target = sorted_scores[0][0]
+        logger.info(f"Selected target column: {best_target}")
+
+        return best_target
 
     # --------------------------------------------------
     # MAIN SCHEMA DETECTOR
@@ -139,15 +192,15 @@ class SchemaDetector:
             "target": self._detect_target_column()
         }
 
-        # Safety check
+        # Final safety check
         if schema["target"] in schema["id_columns"]:
             raise ValueError(
-                f"Detected target `{schema['target']}` looks like an ID column."
+                f"Detected target `{schema['target']}` appears to be an ID column."
             )
 
         logger.info(f"Schema detection complete: {schema}")
         return schema
-   
+
    
 
 
