@@ -3,7 +3,7 @@
 
 Groq-powered AI Analyst for CortexAI.
 Produces structured JSON + human-readable insights.
-Grounded using real pipeline outputs (LLM-safe summaries only).
+STRICTLY grounded using real pipeline outputs (LLM-safe).
 """
 
 import os
@@ -19,17 +19,11 @@ from dotenv import load_dotenv
 env_path = Path(__file__).resolve().parents[2] / ".env"
 load_dotenv(dotenv_path=env_path)
 
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY") or st.secrets.get("GROQ_API_KEY")
 
-# Streamlit Cloud fallback
-if GROQ_API_KEY is None:
-    try:
-        GROQ_API_KEY = st.secrets.get("GROQ_API_KEY")
-    except Exception:
-        GROQ_API_KEY = None
-
-if GROQ_API_KEY is None:
-    st.warning("⚠️ No Groq API key found. Add GROQ_API_KEY in .env or Streamlit secrets.")
+if not GROQ_API_KEY:
+    st.error("❌ GROQ_API_KEY missing.")
+    st.stop()
 
 # --------------------------------------------------
 # USAGE / PLAN MANAGEMENT
@@ -44,81 +38,121 @@ from pipeline.usage_manager import (
 init_plan_and_usage()
 
 # --------------------------------------------------
-# PROMPTS
+# PROMPTS (STRICT + GROUNDED)
 # --------------------------------------------------
 
-SIMPLE_PROMPT = (
-    "You are a data analyst.\n"
-    "You are given summarized pipeline outputs INCLUDING a dataset quality assessment.\n"
-    "Base your reasoning strictly on these signals.\n\n"
-    "Return ONLY a single valid JSON object.\n"
-    "The JSON MUST start with '{' and end with '}'.\n\n"
-    "Required keys:\n"
-    "- summary (string, 2–4 sentences)\n"
-    "- insights (array of strings)\n"
-    "- recommendations (array of strings)\n"
-    "- warnings (array of strings)\n"
-)
+BASE_CONSTRAINTS = """
+CRITICAL CONSTRAINTS:
+- Use ONLY the information explicitly present in the provided JSON.
+- Do NOT infer, guess, or use prior knowledge.
+- If a question cannot be answered, say:
+  "This information is not available in the pipeline outputs."
 
-PRO_PROMPT = (
-    "You are a senior data scientist.\n"
-    "You are given summarized pipeline outputs INCLUDING a dataset quality assessment.\n"
-    "Explain results honestly, including limitations.\n\n"
-    "Return ONLY a single valid JSON object.\n"
-    "The JSON MUST start with '{' and end with '}'.\n\n"
-    "Required keys:\n"
-    "- summary (string, 3–6 sentences)\n"
-    "- detailed_insights (array of objects with 'insight' and 'evidence')\n"
-    "- recommendations (array of strings)\n"
-    "- warnings (array of objects with 'message' and 'severity')\n"
-    "- model_explanation (string)\n"
-)
+JSON RULES:
+- Output MUST be valid JSON.
+- Arrays MUST be real JSON arrays (no numeric keys).
+- No text outside the JSON object.
+"""
+
+SIMPLE_PROMPT = f"""
+You are a data analyst.
+
+Return EXACTLY this JSON object:
+{{
+  "summary": string,
+  "technical_summary": string,
+  "insights": [string],
+  "recommendations": [string],
+  "warnings": [string]
+}}
+
+{BASE_CONSTRAINTS}
+"""
+
+PRO_PROMPT = f"""
+You are a senior data scientist.
+
+Return EXACTLY this JSON object:
+{{
+  "summary": string,
+  "technical_summary": string,
+  "detailed_insights": [
+    {{
+      "insight": string,
+      "evidence": string
+    }}
+  ],
+  "recommendations": [string],
+  "warnings": [string],
+  "model_explanation": string
+}}
+
+{BASE_CONSTRAINTS}
+"""
 
 # --------------------------------------------------
 # GROQ API
 # --------------------------------------------------
 
-def call_groq(messages, model, temperature=0.0, max_tokens=700):
-    if GROQ_API_KEY is None:
-        raise RuntimeError("GROQ_API_KEY not configured.")
+GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
-    url = "https://api.groq.com/openai/v1/chat/completions"
+FREE_MODELS = ["llama-3.1-8b-instant"]
+PRO_MODELS = ["llama-3.1-70b-versatile", "llama-3.1-8b-instant"]
+
+def call_groq(messages, models, temperature, max_tokens):
     headers = {
         "Authorization": f"Bearer {GROQ_API_KEY}",
         "Content-Type": "application/json"
     }
 
-    payload = {
-        "model": model,
-        "messages": messages,
-        "temperature": temperature,
-        "max_tokens": max_tokens
-    }
+    last_error = None
 
-    resp = requests.post(url, headers=headers, json=payload, timeout=60)
-    resp.raise_for_status()
-    return resp.json()
+    for model in models:
+        payload = {
+            "model": model,
+            "messages": messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens
+        }
+
+        try:
+            resp = requests.post(GROQ_URL, headers=headers, json=payload, timeout=60)
+            if resp.status_code == 200:
+                return resp.json(), model
+            last_error = resp.text
+        except Exception as e:
+            last_error = str(e)
+
+    raise RuntimeError(last_error)
 
 # --------------------------------------------------
 # HELPERS
 # --------------------------------------------------
 
+def normalize_arrays(obj):
+    """Fix numeric-key arrays returned by LLM"""
+    if isinstance(obj, dict):
+        # numeric keys → list
+        if all(isinstance(k, str) and k.isdigit() for k in obj.keys()):
+            return [normalize_arrays(v) for _, v in sorted(obj.items(), key=lambda x: int(x[0]))]
+        return {k: normalize_arrays(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [normalize_arrays(v) for v in obj]
+    return obj
+
+
+def extract_json(text: str):
+    try:
+        start = text.find("{")
+        end = text.rfind("}")
+        return normalize_arrays(json.loads(text[start:end + 1]))
+    except Exception:
+        return None
+
+
 def collect_session_reports():
-    keys = [
-        "meta",
-        "schema",
-        "cleaning_report",
-        "eda_report",
-        "training_summary",
-        "dataset_quality"
-    ]
-
-    reports = {}
-    for k in keys:
-        if k in st.session_state:
-            reports[k] = st.session_state[k]
-
-    return reports if reports else None
+    keys = ["schema", "eda_report", "dataset_quality"]
+    return {k: st.session_state[k] for k in keys if k in st.session_state}
 
 
 def build_llm_safe_reports(reports: dict) -> dict:
@@ -127,47 +161,21 @@ def build_llm_safe_reports(reports: dict) -> dict:
     if "schema" in reports:
         safe["schema"] = {
             "target": reports["schema"].get("target"),
-            "num_numeric_features": len(reports["schema"].get("numeric", [])),
-            "num_categorical_features": len(reports["schema"].get("categorical", []))
-        }
-
-    if "cleaning_report" in reports:
-        safe["cleaning_summary"] = reports["cleaning_report"]
-
-    if "training_summary" in reports:
-        safe["training_summary"] = {
-            "best_model": reports["training_summary"].get("best_model"),
-            "best_score": reports["training_summary"].get("best_score")
+            "num_numeric": len(reports["schema"].get("numeric", [])),
+            "num_categorical": len(reports["schema"].get("categorical", []))
         }
 
     if "dataset_quality" in reports:
         safe["dataset_quality"] = reports["dataset_quality"]
 
+    if "eda_report" in reports:
+        eda = reports["eda_report"]
+        safe["eda_summary"] = {
+            "binary_outcomes": eda.get("binary_outcomes", []),
+            "outcome_analysis": eda.get("outcome_analysis", {})
+        }
+
     return safe
-
-
-def extract_json_from_text(text: str):
-    """
-    Robust JSON extraction.
-    Handles extra text before/after JSON.
-    """
-    try:
-        cleaned = text.strip()
-
-        if "```" in cleaned:
-            cleaned = cleaned.split("```")[1]
-
-        start = cleaned.find("{")
-        end = cleaned.rfind("}")
-
-        if start == -1 or end == -1:
-            return None
-
-        candidate = cleaned[start:end + 1]
-        return json.loads(candidate)
-
-    except Exception:
-        return None
 
 # --------------------------------------------------
 # STREAMLIT UI
@@ -175,139 +183,63 @@ def extract_json_from_text(text: str):
 
 st.set_page_config(page_title="AI Analyst — CortexAI", layout="wide")
 st.title("🧠 AI Analyst (Groq-powered)")
-st.caption("Grounded AI insights based on real AutoML pipeline outputs.")
+st.caption("Strictly grounded AI insights based on pipeline outputs.")
 
 mode = st.radio("Choose Analysis Mode:", ["Simple", "Professional", "Both"])
-
-# --------------------------------------------------
-# LOAD REPORTS
-# --------------------------------------------------
 
 reports = collect_session_reports()
 if not reports:
     st.error("Run Load → Schema → Cleaning → EDA → Training first.")
     st.stop()
 
-st.subheader("Reports Loaded:")
-for k in reports.keys():
-    st.write(f"✔️ {k}")
-
 # --------------------------------------------------
-# DATASET QUALITY (SHOWN ONCE)
+# DATASET QUALITY
 # --------------------------------------------------
 
 if "dataset_quality" in reports:
     dq = reports["dataset_quality"]
-
-    st.subheader("🧠 Dataset Quality Summary")
     st.metric("Learnability Score", f"{dq['learnability_score']} / 100")
-    st.info(f"**Verdict:** {dq['verdict']}")
-
-    if dq.get("reasons"):
-        st.markdown("**Key Reasons:**")
-        for r in dq["reasons"]:
-            st.write("•", r)
+    st.info(f"Verdict: {dq['verdict']}")
 
 # --------------------------------------------------
 # LLM CONFIG
 # --------------------------------------------------
 
-temperature = st.slider("Temperature", 0.0, 1.0, 0.0, step=0.05)
-max_tokens = st.number_input("Max Output Tokens", value=700, min_value=256, max_value=4096)
-custom_question = st.text_area("Optional: Ask a custom question", height=80)
+temperature = st.slider("Temperature", 0.0, 1.0, 0.0)
+max_tokens = st.number_input("Max Output Tokens", 256, 2048, 800)
+custom_question = st.text_area("Optional: Ask a custom question")
 
 safe_reports = build_llm_safe_reports(reports)
-user_json = json.dumps(safe_reports, indent=2)
+user_json = json.dumps(safe_reports, separators=(",", ":"))
 
 # --------------------------------------------------
-# ENFORCE LLM LIMIT
-# --------------------------------------------------
-
-enforce_limit(
-    key="llm_calls",
-    message="🚫 AI Analyst limit reached for Free plan. Upgrade to Pro for unlimited AI insights."
-)
-
-# --------------------------------------------------
-# ANALYZE BUTTON
+# RUN ANALYSIS
 # --------------------------------------------------
 
 if st.button("Generate Analysis"):
-
+    enforce_limit("llm_calls", "🚫 AI Analyst limit reached.")
     increment_usage("llm_calls")
 
-    current_plan = get_current_plan()
-    model_name = (
-        "llama-3.1-8b-instant"
-        if current_plan == "free"
-        else "llama3-70b-8192"
-    )
+    plan = get_current_plan()
+    models = FREE_MODELS if plan == "free" else PRO_MODELS
 
-    prompt = SIMPLE_PROMPT if mode == "Simple" else PRO_PROMPT
+    def run_llm(prompt):
+        messages = [
+            {"role": "system", "content": prompt},
+            {"role": "user", "content": f"Pipeline JSON:\n{user_json}\n\nQuestion:\n{custom_question or 'None'}"}
+        ]
+        raw, model_used = call_groq(messages, models, temperature, max_tokens)
+        return extract_json(raw["choices"][0]["message"]["content"]), model_used
 
-    messages = [
-        {"role": "system", "content": prompt},
-        {"role": "user", "content": "Here are the pipeline summaries (JSON):\n" + user_json}
-    ]
+    with st.spinner("Analyzing…"):
+        if mode in ["Simple", "Both"]:
+            simple_out, model_used = run_llm(SIMPLE_PROMPT)
+            st.subheader("📝 Simple Analysis")
+            st.json(simple_out)
 
-    if custom_question.strip():
-        messages.append({
-            "role": "user",
-            "content": "Extra question: " + custom_question.strip()
-        })
+        if mode in ["Professional", "Both"]:
+            pro_out, model_used = run_llm(PRO_PROMPT)
+            st.subheader("🧪 Professional Analysis")
+            st.json(pro_out)
 
-    with st.spinner("Analyzing with Groq…"):
-        try:
-            raw = call_groq(
-                messages,
-                model=model_name,
-                temperature=float(temperature),
-                max_tokens=int(max_tokens)
-            )
-
-            content = raw["choices"][0]["message"]["content"]
-
-            parsed = extract_json_from_text(content)
-
-            if not parsed:
-                st.error("Could not parse valid JSON from model output.")
-                st.code(content)
-                st.stop()
-
-            st.subheader("📝 Structured Analysis")
-            st.json(parsed)
-
-            st.download_button(
-                "⬇️ Download JSON Report",
-                data=json.dumps(parsed, indent=2),
-                file_name="ai_analyst_report.json",
-                mime="application/json"
-            )
-
-            if mode in ["Simple", "Both"]:
-                st.subheader("📄 Human-readable Summary")
-
-                if "summary" in parsed:
-                    st.write(parsed["summary"])
-
-                if "insights" in parsed:
-                    st.markdown("### Insights")
-                    for i in parsed["insights"]:
-                        st.write("•", i)
-
-                if "recommendations" in parsed:
-                    st.markdown("### Recommendations")
-                    for r in parsed["recommendations"]:
-                        st.write("•", r)
-
-                if "warnings" in parsed:
-                    st.markdown("### Warnings")
-                    for w in parsed["warnings"]:
-                        st.write("⚠️", w)
-
-            if "model_explanation" in parsed:
-                st.subheader("🧩 Model Explanation")
-                st.write(parsed["model_explanation"])
-
-        except Exception as e:
-            st.error(f"LLM Error: {e}")
+    st.success(f"Model used: `{model_used}`")

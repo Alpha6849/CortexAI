@@ -82,3 +82,5 @@ else:
 
     if "eda_report" in st.session_state:
         st.warning("Previously generated EDA report found.")
+
+st.write("EDA keys:", st.session_state["eda_report"].keys())

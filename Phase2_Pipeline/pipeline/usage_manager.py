@@ -11,7 +11,7 @@ import streamlit as st
 # CONFIG
 # --------------------------------------------------
 
-DEVELOPER_MODE = True   # 🔥 SET TRUE FOR YOU, FALSE IN PRODUCTION
+DEVELOPER_MODE = True   
 
 PLAN_LIMITS = {
     "free": {
@@ -61,14 +61,14 @@ def get_plan_limits():
 
 def increment_usage(key: str):
     if st.session_state.get("is_admin"):
-        return  # 👑 admin bypass
+        return  #  admin bypass
 
     st.session_state["usage"][key] += 1
 
 
 def check_limit(key: str):
     if st.session_state.get("is_admin"):
-        return True  # 👑 unlimited
+        return True  #  unlimited
 
     limits = get_plan_limits()
     usage = st.session_state.get("usage", {})
