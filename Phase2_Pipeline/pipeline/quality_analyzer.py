@@ -2,9 +2,9 @@
 quality_analyzer.py
 
 Evaluates dataset suitability for Machine Learning.
-Provides a learnability score, warnings, and recommendations.
+Provides a learnability score, verdict, reasons, and recommendations.
 
-Part of CortexAI Phase 2+ (Product Intelligence Layer).
+CortexAI Phase 2 — Product Intelligence Layer
 """
 
 from typing import Dict, List
@@ -29,7 +29,7 @@ class DatasetQualityAnalyzer:
         self.training = training_results
         self.baseline_name = baseline_name
 
-        self.score = 100
+        self.score = 50  # neutral starting point
         self.reasons: List[str] = []
         self.recommendations: List[str] = []
 
@@ -37,16 +37,13 @@ class DatasetQualityAnalyzer:
     # PUBLIC API
     # --------------------------------------------------
     def analyze(self) -> Dict:
-        """
-        Run full dataset quality analysis.
-        """
-        self._check_id_dominance()
         self._check_target_imbalance()
         self._check_model_improvement()
+        self._check_feature_richness()
         self._finalize_score()
 
         return {
-            "learnability_score": max(self.score, 0),
+            "learnability_score": min(max(self.score, 0), 100),
             "verdict": self._verdict(),
             "reasons": self.reasons,
             "recommendations": self.recommendations
@@ -55,53 +52,27 @@ class DatasetQualityAnalyzer:
     # --------------------------------------------------
     # CHECKS
     # --------------------------------------------------
-    def _check_id_dominance(self):
-        numeric_cols = self.schema.get("numeric", [])
-        id_cols = self.schema.get("id_columns", [])
-
-        if not numeric_cols:
-            self.score -= 30
-            self.reasons.append(
-                "No meaningful numeric features detected."
-            )
-            self.recommendations.append(
-                "Add real-valued features relevant to the prediction task."
-            )
-            return
-
-        id_ratio = len(id_cols) / max(len(numeric_cols), 1)
-
-        if id_ratio > 0.5:
-            self.score -= 25
-            self.reasons.append(
-                "A large portion of features appear to be identifiers."
-            )
-            self.recommendations.append(
-                "Remove ID-like columns or replace them with domain features."
-            )
-
     def _check_target_imbalance(self):
         target_info = self.eda.get("target_analysis", {})
 
-        if not target_info:
+        if target_info.get("task_type") != "classification":
             return
 
-        if target_info.get("type") == "classification":
-            class_dist = target_info.get("class_distribution", {})
-            if not class_dist:
-                return
+        class_dist = target_info.get("class_distribution", {})
+        if not class_dist:
+            return
 
-            counts = np.array(list(class_dist.values()))
-            imbalance_ratio = counts.max() / max(counts.min(), 1)
+        counts = np.array(list(class_dist.values()))
+        imbalance_ratio = counts.max() / max(counts.min(), 1)
 
-            if imbalance_ratio > 10:
-                self.score -= 20
-                self.reasons.append(
-                    f"Severe target class imbalance detected (ratio ≈ {imbalance_ratio:.1f}:1)."
-                )
-                self.recommendations.append(
-                    "Consider resampling, class weighting, or reframing the problem."
-                )
+        if imbalance_ratio > 10:
+            self.score -= 15
+            self.reasons.append(
+                f"Severe class imbalance detected (≈ {imbalance_ratio:.1f}:1)."
+            )
+            self.recommendations.append(
+                "Consider resampling, class weights, or alternative metrics."
+            )
 
     def _check_model_improvement(self):
         if self.baseline_name not in self.training:
@@ -112,18 +83,48 @@ class DatasetQualityAnalyzer:
             v["cv_mean_score"] for v in self.training.values()
         )
 
-        if baseline_score <= 0:
-            return
+        absolute_gain = best_score - baseline_score
 
-        improvement_factor = best_score / baseline_score
-
-        if improvement_factor < 2:
-            self.score -= 30
+        if absolute_gain >= 0.25:
+            self.score += 30
             self.reasons.append(
-                "Models barely outperform the baseline."
+                f"Models significantly outperform the baseline (+{absolute_gain:.2f})."
+            )
+
+        elif absolute_gain >= 0.10:
+            self.score += 15
+            self.reasons.append(
+                f"Models moderately outperform the baseline (+{absolute_gain:.2f})."
             )
             self.recommendations.append(
-                "Add stronger features or reconsider the prediction target."
+                "Feature engineering may further improve performance."
+            )
+
+        else:
+            self.score -= 20
+            self.reasons.append(
+                "Models show limited improvement over the baseline."
+            )
+            self.recommendations.append(
+                "Consider adding stronger features or revisiting the prediction task."
+            )
+
+    def _check_feature_richness(self):
+        feature_count = (
+            len(self.schema.get("numeric", [])) +
+            len(self.schema.get("ordinal", [])) +
+            len(self.schema.get("categorical", []))
+        )
+
+        if feature_count >= 6:
+            self.score += 10
+            self.reasons.append(
+                "Dataset contains a diverse and informative feature set."
+            )
+        elif feature_count <= 2:
+            self.score -= 10
+            self.reasons.append(
+                "Very limited number of usable features detected."
             )
 
     # --------------------------------------------------
@@ -136,8 +137,8 @@ class DatasetQualityAnalyzer:
             )
 
     def _verdict(self) -> str:
-        if self.score >= 70:
-            return "High ML potential"
-        if self.score >= 40:
+        if self.score >= 80:
+            return "Strong ML potential"
+        if self.score >= 60:
             return "Moderate ML potential"
         return "Low ML potential"

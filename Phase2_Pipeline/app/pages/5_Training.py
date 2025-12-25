@@ -36,11 +36,11 @@ st.title("🤖 Model Training — AutoML")
 # Session Guards
 # --------------------------------------------------
 if "cleaned_df" not in st.session_state:
-    st.error("No cleaned dataset found. Run Cleaning first.")
+    st.error("No cleaned dataset found. Please run **Cleaning** first.")
     st.stop()
 
 if "schema" not in st.session_state:
-    st.error("Schema not found. Run Schema Detection first.")
+    st.error("Schema not found. Please run **Schema Detection** first.")
     st.stop()
 
 df = st.session_state["cleaned_df"]
@@ -50,17 +50,26 @@ schema = st.session_state["schema"]
 # Page Description
 # --------------------------------------------------
 st.markdown("""
-**This step performs:**
-- Feature preparation  
+This stage automatically trains multiple machine learning models
+and selects the best one using cross-validation.
+
+**What happens here:**
+- Schema-driven feature preparation  
 - 5-fold cross-validation  
 - Best model selection  
-- Retraining on full data  
-- Dataset quality assessment  
-- Model & summary export  
+- Retraining on full dataset  
+- Dataset quality & learnability assessment  
+- Model and summary export  
 """)
 
 # --------------------------------------------------
-# Enforce training run limit BEFORE button
+# Existing results notice
+# --------------------------------------------------
+if "training_results" in st.session_state:
+    st.info("Previous training results detected. Re-run to update them.")
+
+# --------------------------------------------------
+# Enforce usage limits
 # --------------------------------------------------
 enforce_limit(
     key="pipeline_runs",
@@ -72,7 +81,6 @@ enforce_limit(
 # --------------------------------------------------
 if st.button("🚀 Start AutoML Training"):
 
-    # Increment usage immediately
     increment_usage("pipeline_runs")
 
     # -----------------------------
@@ -81,35 +89,52 @@ if st.button("🚀 Start AutoML Training"):
     trainer = ModelTrainer(df, schema)
 
     # -----------------------------
-    # Prepare Data
+    # Data Preparation
     # -----------------------------
-    with st.spinner("Preparing data..."):
+    with st.spinner("Preparing features using schema..."):
         prep_info = trainer.prepare_data()
 
-    st.subheader("📦 Data Preparation")
+    st.subheader("📦 Data Preparation Summary")
     st.json(prep_info)
 
     # -----------------------------
     # Train Models
     # -----------------------------
-    st.subheader("📊 Cross-Validation Results")
+    st.subheader("📊 Model Performance (Cross-Validation)")
 
-    with st.spinner("Training models..."):
+    with st.spinner("Training models with cross-validation..."):
         training_results = trainer.train_all_models()
 
     st.session_state["training_results"] = training_results
-    st.json(training_results)
+
+    # --- Performance Summary ---
+    st.markdown("### 📈 Mean CV Scores")
+    for model, info in training_results.items():
+        st.write(
+            f"**{model}** → `{info['cv_mean_score']:.3f}`"
+        )
+
+    with st.expander("🔍 Full cross-validation details"):
+        st.json(training_results)
 
     if trainer.best_model_name is None:
-        st.error("Training failed. No valid model.")
+        st.error("Training failed. No valid model was selected.")
         st.stop()
 
     # -----------------------------
     # Best Model
     # -----------------------------
-    st.subheader("🏆 Best Model")
-    st.write(f"**Model:** `{trainer.best_model_name}`")
-    st.write(f"**Mean CV Score:** `{trainer.best_score}`")
+    st.subheader("🏆 Best Model Selected")
+
+    st.success(
+        f"**{trainer.best_model_name}** "
+        f"(Mean CV Score: {trainer.best_score:.3f})"
+    )
+
+    st.caption(
+        f"Evaluation metric used: **{trainer.metric_used}** "
+        "(chosen automatically based on task type)"
+    )
 
     # -----------------------------
     # Retrain Best Model
@@ -117,36 +142,42 @@ if st.button("🚀 Start AutoML Training"):
     with st.spinner("Retraining best model on full dataset..."):
         trainer.retrain_best_model()
 
-    st.success("Best model retrained successfully.")
+    st.success("Best model retrained on full dataset.")
 
     # -----------------------------
-    # Dataset Quality Analysis
+    # Dataset Quality Assessment
     # -----------------------------
-    st.subheader("🧠 Dataset Quality Assessment")
+    st.subheader("🧠 Dataset Learnability Assessment")
 
     quality_analyzer = DatasetQualityAnalyzer(
         schema=schema,
         eda_report=st.session_state.get("eda_report", {}),
-        training_results=st.session_state["training_results"]
+        training_results=training_results
     )
 
     dataset_quality = quality_analyzer.analyze()
     st.session_state["dataset_quality"] = dataset_quality
 
-    st.metric(
-        label="Learnability Score",
-        value=f"{dataset_quality['learnability_score']} / 100"
-    )
+    score = dataset_quality["learnability_score"]
+
+    if score >= 80:
+        st.success(f"Learnability Score: **{score} / 100**")
+    elif score >= 60:
+        st.warning(f"Learnability Score: **{score} / 100**")
+    else:
+        st.error(f"Learnability Score: **{score} / 100**")
 
     st.info(f"**Verdict:** {dataset_quality['verdict']}")
 
+    # ---- Reasons ----
     if dataset_quality["reasons"]:
-        st.markdown("**Reasons:**")
+        st.markdown("### ✅ Why this dataset works")
         for reason in dataset_quality["reasons"]:
-            st.write(f"• {reason}")
+            st.write(f"✔ {reason}")
 
+    # ---- Recommendations ----
     if dataset_quality["recommendations"]:
-        st.markdown("**Recommendations:**")
+        st.markdown("### 🔧 How to improve further")
         for rec in dataset_quality["recommendations"]:
             st.write(f"• {rec}")
 
@@ -157,7 +188,7 @@ if st.button("🚀 Start AutoML Training"):
     summary = trainer.save_training_summary("training_summary.json")
 
     # -----------------------------
-    # Downloads (PRO VALUE HOOK)
+    # Downloads
     # -----------------------------
     st.subheader("⬇️ Downloads")
 

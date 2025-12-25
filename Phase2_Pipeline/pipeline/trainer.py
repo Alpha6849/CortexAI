@@ -1,21 +1,24 @@
 """
 trainer.py
 
-Handles automatic model training, evaluation,
-and best-model selection for CortexAI Phase 2.
+Schema-driven AutoML trainer for CortexAI.
 
-AutoML v1:
-- Numeric-only (safe)
-- Schema-driven task type
-- Proper preprocessing pipelines
-- Baseline sanity check
-- Correct metrics
+SAFE & GENERAL:
+- Binary & multiclass classification
+- Regression
+- Pipeline-safe scoring
+- No silent model drops
 """
 
 import logging
 import pandas as pd
 from typing import Dict
-from sklearn.model_selection import cross_val_score, KFold
+
+from sklearn.model_selection import cross_val_score, KFold, StratifiedKFold
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import OneHotEncoder, StandardScaler, LabelEncoder
+from sklearn.pipeline import Pipeline
+from sklearn.metrics import f1_score, make_scorer
 
 logger = logging.getLogger("ModelTrainer")
 logger.setLevel(logging.INFO)
@@ -26,17 +29,11 @@ class ModelTrainer:
         self.df = df
         self.schema = schema
 
-        self.target = schema.get("target")
-        self.task_type = schema.get("task_type")
-        self.warnings = schema.get("warnings", [])
+        self.target = schema["target"]
+        self.task_type = schema["task_type"]
 
-        if not self.target or self.target not in df.columns:
+        if self.target not in df.columns:
             raise ValueError("Target column missing in trainer.")
-
-        # Hard stop on fatal schema warnings
-        for w in self.warnings:
-            if "constant" in w.lower():
-                raise ValueError(f"Invalid target: {w}")
 
         self.X = None
         self.y = None
@@ -51,40 +48,35 @@ class ModelTrainer:
     # --------------------------------------------------
     # FEATURE PREPARATION
     # --------------------------------------------------
-    def _prepare_ml_features(self):
+    def prepare_data(self):
 
-        numeric_cols = self.schema.get("numeric", [])
+        numeric = self.schema.get("numeric", [])
+        ordinal = self.schema.get("ordinal", [])
+        categorical = self.schema.get("categorical", [])
         id_cols = self.schema.get("id_columns", [])
 
         feature_cols = [
-            c for c in numeric_cols
-            if c != self.target
-            and c not in id_cols
-            and c in self.df.columns
+            c for c in (numeric + ordinal + categorical)
+            if c in self.df.columns and c not in id_cols and c != self.target
         ]
 
         if not feature_cols:
-            raise ValueError("No valid numeric features for ML.")
+            raise ValueError("No valid features found for training.")
 
-        X = self.df[feature_cols].copy()
+        self.X = self.df[feature_cols].copy()
         y = self.df[self.target].copy()
 
-        return X, y
-
-    def prepare_data(self):
-
-        self.X, self.y = self._prepare_ml_features()
-
         if self.task_type == "classification":
-            from sklearn.preprocessing import LabelEncoder
             self.label_encoder = LabelEncoder()
-            self.y = self.label_encoder.fit_transform(self.y)
+            self.y = self.label_encoder.fit_transform(y)
+        else:
+            self.y = y
 
         return {
             "rows": self.X.shape[0],
             "features": self.X.shape[1],
             "task_type": self.task_type,
-            "feature_columns": list(self.X.columns)
+            "feature_columns": feature_cols
         }
 
     # --------------------------------------------------
@@ -92,78 +84,104 @@ class ModelTrainer:
     # --------------------------------------------------
     def train_all_models(self):
 
-        from sklearn.pipeline import Pipeline
-        from sklearn.preprocessing import StandardScaler
         from sklearn.dummy import DummyClassifier, DummyRegressor
-
         from sklearn.linear_model import LogisticRegression, LinearRegression
         from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
         from sklearn.svm import SVC
         from sklearn.neighbors import KNeighborsClassifier
 
-        kf = KFold(n_splits=5, shuffle=True, random_state=42)
+        numeric = [
+    c for c in (self.schema.get("numeric", []) + self.schema.get("ordinal", []))
+    if c in self.X.columns
+]
 
-        # ---------------- CLASSIFICATION ----------------
+        categorical = [
+    c for c in self.schema.get("categorical", [])
+    if c in self.X.columns
+]
+
+
+        preprocessor = ColumnTransformer(
+            transformers=[
+                ("num", StandardScaler(), numeric),
+                ("cat", OneHotEncoder(handle_unknown="ignore"), categorical),
+            ],
+            remainder="drop"
+        )
+
+        # ---------------- CV + SCORER ----------------
         if self.task_type == "classification":
+            cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 
-            self.metric_used = "f1_weighted"
+            n_classes = len(set(self.y))
+            if n_classes > 2:
+                scorer = make_scorer(f1_score, average="macro")
+                self.metric_used = "f1_macro"
+            else:
+                scorer = make_scorer(f1_score, average="weighted")
+                self.metric_used = "f1_weighted"
 
+        else:
+            cv = KFold(n_splits=5, shuffle=True, random_state=42)
+            scorer = "r2"
+            self.metric_used = "r2"
+
+        # ---------------- MODELS ----------------
+        if self.task_type == "classification":
             models = {
                 "Baseline": DummyClassifier(strategy="most_frequent"),
 
                 "LogisticRegression": Pipeline([
-                    ("scaler", StandardScaler()),
+                    ("prep", preprocessor),
                     ("model", LogisticRegression(max_iter=1000))
                 ]),
 
                 "SVC": Pipeline([
-                    ("scaler", StandardScaler()),
+                    ("prep", preprocessor),
                     ("model", SVC(C=10, gamma="scale"))
                 ]),
 
                 "KNN": Pipeline([
-                    ("scaler", StandardScaler()),
+                    ("prep", preprocessor),
                     ("model", KNeighborsClassifier())
                 ]),
 
-                "RandomForestClassifier": RandomForestClassifier(
-                    n_estimators=200,
-                    random_state=42
-                )
+                "RandomForestClassifier": Pipeline([
+                    ("prep", preprocessor),
+                    ("model", RandomForestClassifier(
+                        n_estimators=200,
+                        random_state=42
+                    ))
+                ])
             }
 
-        # ---------------- REGRESSION ----------------
         else:
-
-            self.metric_used = "r2"
-
             models = {
                 "Baseline": DummyRegressor(strategy="mean"),
 
                 "LinearRegression": Pipeline([
-                    ("scaler", StandardScaler()),
+                    ("prep", preprocessor),
                     ("model", LinearRegression())
                 ]),
 
-                "RandomForestRegressor": RandomForestRegressor(
-                    n_estimators=200,
-                    random_state=42
-                )
+                "RandomForestRegressor": Pipeline([
+                    ("prep", preprocessor),
+                    ("model", RandomForestRegressor(
+                        n_estimators=200,
+                        random_state=42
+                    ))
+                ])
             }
 
         # ---------------- TRAIN LOOP ----------------
         for name, model in models.items():
-            try:
-                scores = cross_val_score(
-                    model,
-                    self.X,
-                    self.y,
-                    cv=kf,
-                    scoring=self.metric_used
-                )
-            except Exception as e:
-                logger.warning(f"{name} failed: {e}")
-                continue
+            scores = cross_val_score(
+                model,
+                self.X,
+                self.y,
+                cv=cv,
+                scoring=scorer
+            )
 
             mean_score = scores.mean()
 
@@ -183,10 +201,6 @@ class ModelTrainer:
     # RETRAIN + SAVE
     # --------------------------------------------------
     def retrain_best_model(self):
-
-        if self.best_model is None:
-            raise ValueError("No best model selected.")
-
         self.best_model.fit(self.X, self.y)
         return self.best_model
 

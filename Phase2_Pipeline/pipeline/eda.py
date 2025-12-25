@@ -1,12 +1,14 @@
 """
 eda.py
 
-Automated EDA module for CortexAI.
-Generates dataset statistics, visual summaries,
-and insights to support automatic ML decisions.
+Schema-driven EDA module for CortexAI.
 
-🚫 Does NOT guess target or task type
-✅ Fully trusts schema (target + task_type)
+RULES:
+- Uses CLEANED dataframe only
+- Fully trusts schema (no guessing)
+- Never mutates data
+- Ordinal ≠ Numeric ≠ Categorical
+- Target is NEVER modified
 """
 
 import os
@@ -31,21 +33,21 @@ if not logger.handlers:
 
 class EDAEngine:
     """
-    Generates visual and statistical EDA for tabular datasets.
+    Generates statistical EDA for tabular datasets.
 
     Inputs:
-    - Cleaned Pandas DataFrame
-    - Validated schema dictionary
+    - Cleaned DataFrame
+    - Validated schema
 
-    Outputs:
-    - EDA report dictionary (for UI & LLM)
+    Output:
+    - Structured EDA report for UI + LLM
     """
 
     def __init__(self, df: pd.DataFrame, schema: Dict, output_dir: Optional[str] = None):
         self.df = df
         self.schema = schema
-        self.target = schema.get("target")
-        self.task_type = schema.get("task_type")
+        self.target = schema["target"]
+        self.task_type = schema["task_type"]
         self.output_dir = output_dir or "eda_results"
         self.report = {}
 
@@ -76,7 +78,10 @@ class EDAEngine:
         }
 
         numeric_cols = [
-            c for c in self.schema.get("numeric", [])
+            c for c in (
+                self.schema.get("numeric", []) +
+                self.schema.get("ordinal", [])
+            )
             if c in self.df.columns and c != self.target
         ]
 
@@ -90,7 +95,7 @@ class EDAEngine:
         return stats
 
     # --------------------------------------------------
-    # TARGET ANALYSIS (SCHEMA-DRIVEN)
+    # TARGET ANALYSIS
     # --------------------------------------------------
     def analyze_target_column(self) -> Dict:
         target_data = self.df[self.target]
@@ -112,11 +117,11 @@ class EDAEngine:
             }
 
         self.report["target_analysis"] = result
-        logger.info(f"Target analysis completed: {result}")
+        logger.info("Target analysis completed.")
         return result
 
     # --------------------------------------------------
-    # NUMERIC FEATURE ANALYSIS (FEATURES ONLY)
+    # NUMERIC FEATURE ANALYSIS (CONTINUOUS)
     # --------------------------------------------------
     def analyze_numeric_columns(self) -> Dict:
         numeric_cols = [
@@ -143,24 +148,51 @@ class EDAEngine:
         return numeric_info
 
     # --------------------------------------------------
-    # CORRELATION ANALYSIS (FEATURES ONLY)
+    # ORDINAL FEATURE ANALYSIS
     # --------------------------------------------------
-    def analyze_correlations(self) -> Dict:
-        numeric_cols = [
-            c for c in self.schema.get("numeric", [])
+    def analyze_ordinal_columns(self) -> Dict:
+        ordinal_cols = [
+            c for c in self.schema.get("ordinal", [])
             if c in self.df.columns and c != self.target
         ]
 
-        if len(numeric_cols) < 2:
-            logger.info("Not enough numeric features for correlation analysis.")
+        ordinal_info = {}
+
+        for col in ordinal_cols:
+            ordinal_info[col] = {
+                "value_counts": self.df[col].value_counts().to_dict(),
+                "min": int(self.df[col].min()),
+                "max": int(self.df[col].max())
+            }
+
+        self.report["ordinal_analysis"] = ordinal_info
+        logger.info("Ordinal feature analysis completed.")
+        return ordinal_info
+
+    # --------------------------------------------------
+    # CORRELATION ANALYSIS (NUMERIC + ORDINAL)
+    # --------------------------------------------------
+    def analyze_correlations(self) -> Dict:
+        corr_cols = [
+            c for c in (
+                self.schema.get("numeric", []) +
+                self.schema.get("ordinal", [])
+            )
+            if c in self.df.columns and c != self.target
+        ]
+
+        if len(corr_cols) < 2:
+            logger.info("Not enough columns for correlation analysis.")
+            self.report["correlation_matrix"] = {}
+            self.report["high_correlation_pairs"] = {}
             return {}
 
-        corr_matrix = self.df[numeric_cols].corr().round(3)
+        corr_matrix = self.df[corr_cols].corr().round(3)
         high_corr_pairs = {}
 
-        for i in range(len(numeric_cols)):
-            for j in range(i + 1, len(numeric_cols)):
-                c1, c2 = numeric_cols[i], numeric_cols[j]
+        for i in range(len(corr_cols)):
+            for j in range(i + 1, len(corr_cols)):
+                c1, c2 = corr_cols[i], corr_cols[j]
                 corr_val = abs(corr_matrix.loc[c1, c2])
                 if corr_val >= 0.8:
                     high_corr_pairs[f"{c1} & {c2}"] = corr_matrix.loc[c1, c2]
@@ -175,13 +207,15 @@ class EDAEngine:
         }
 
     # --------------------------------------------------
-    # BINARY OUTCOME ANALYSIS (TARGET ONLY)
+    # BINARY OUTCOME ANALYSIS (CATEGORICAL vs TARGET)
     # --------------------------------------------------
     def analyze_binary_outcomes(self) -> Dict:
         if self.task_type != "classification":
+            self.report["binary_outcome_analysis"] = {}
             return {}
 
         if self.df[self.target].nunique() != 2:
+            self.report["binary_outcome_analysis"] = {}
             return {}
 
         outcome_analysis = {}
@@ -210,25 +244,31 @@ class EDAEngine:
         return outcome_analysis
 
     # --------------------------------------------------
-    # PLOT SUGGESTION REFINEMENT
+    # KEY INSIGHTS (HUMAN-READABLE)
     # --------------------------------------------------
-    def refine_plot_suggestions(self):
-        numeric_info = self.report.get("numeric_analysis", {})
-        high_corr = self.report.get("high_correlation_pairs", {})
+    def generate_key_insights(self):
+        insights = []
 
-        for col, info in numeric_info.items():
+        # Target distribution
+        if self.task_type == "classification":
+            dist = self.report.get("target_analysis", {}).get("class_distribution", {})
+            if dist:
+                total = sum(dist.values())
+                ratios = {k: round(v / total, 2) for k, v in dist.items()}
+                insights.append(f"Target distribution: {ratios}")
+
+        # Skewed numeric features
+        for col, info in self.report.get("numeric_analysis", {}).items():
             if abs(info.get("skewness", 0)) > 1:
-                info["insight"] = "Highly skewed distribution — consider transformation"
+                insights.append(f"{col} is highly skewed")
 
-        for pair in high_corr:
-            c1, c2 = pair.split(" & ")
-            if c1 in numeric_info:
-                numeric_info[c1]["suggest_plots"].append(f"scatter_with:{c2}")
-            if c2 in numeric_info:
-                numeric_info[c2]["suggest_plots"].append(f"scatter_with:{c1}")
+        # Strong categorical signals
+        for col, rates in self.report.get("binary_outcome_analysis", {}).items():
+            if rates:
+                insights.append(f"{col} shows strong relationship with target")
 
-        self.report["numeric_analysis"] = numeric_info
-        logger.info("Plot suggestions refined.")
+        self.report["key_insights"] = insights
+        logger.info("Key insights generated.")
 
     # --------------------------------------------------
     # FINAL REPORT
@@ -237,9 +277,10 @@ class EDAEngine:
         self.generate_basic_statistics()
         self.analyze_target_column()
         self.analyze_numeric_columns()
+        self.analyze_ordinal_columns()
         self.analyze_correlations()
         self.analyze_binary_outcomes()
-        self.refine_plot_suggestions()
+        self.generate_key_insights()
 
         logger.info("Final EDA report generated.")
         return self.report

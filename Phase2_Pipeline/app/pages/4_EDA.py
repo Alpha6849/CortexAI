@@ -3,7 +3,9 @@ import os
 import streamlit as st
 import json
 
-# Fix import path for pipeline/
+# --------------------------------------------------
+# Fix import path
+# --------------------------------------------------
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 APP_DIR = os.path.dirname(CURRENT_DIR)
 PARENT_DIR = os.path.dirname(APP_DIR)
@@ -14,7 +16,9 @@ from pipeline.eda import EDAEngine
 
 st.title("📊 Exploratory Data Analysis (EDA)")
 
-# Ensure dependencies exist
+# --------------------------------------------------
+# Preconditions
+# --------------------------------------------------
 if "cleaned_df" not in st.session_state:
     st.error("No cleaned dataset found. Please run Cleaning first.")
     st.stop()
@@ -27,60 +31,78 @@ df = st.session_state["cleaned_df"]
 schema = st.session_state["schema"]
 
 st.write("""
-This step generates automated EDA:
-- Basic statistics  
-- Distribution analysis  
-- Target analysis  
-- Correlation matrix  
-- Plot suggestions  
+This step generates automated, schema-aware EDA:
+
+• Dataset overview  
+• Target analysis  
+• Numeric & ordinal feature analysis  
+• Categorical outcome analysis  
+• Correlation insights  
 """)
 
-# Run EDA (button-controlled)
-if st.button("Run EDA Analysis"):
+# --------------------------------------------------
+# Run EDA
+# --------------------------------------------------
+if st.button("▶ Run EDA Analysis"):
     engine = EDAEngine(df, schema)
     eda_report = engine.generate_report()
-
-    # Save to session state
     st.session_state["eda_report"] = eda_report
+    st.success("EDA Analysis completed successfully!")
 
-    st.success("EDA Analysis completed!")
+# --------------------------------------------------
+# Display EDA (if available)
+# --------------------------------------------------
+if "eda_report" in st.session_state:
+    eda = st.session_state["eda_report"]
 
-    # Display main sections
-    st.subheader("📘 Full EDA Report")
-    st.json(eda_report)
+    # ---- Key Insights ----
+    st.subheader("🧠 Key Insights")
+    insights = eda.get("key_insights", [])
+    if insights:
+        for i in insights:
+            st.markdown(f"- {i}")
+    else:
+        st.info("No strong high-level insights detected.")
 
     # ---- Basic Statistics ----
-    st.subheader("📊 Basic Statistics")
-    st.json(eda_report.get("basic_statistics", {}))
+    st.subheader("📊 Dataset Overview")
+    st.json(eda.get("basic_statistics", {}))
 
-    # ---- Target Column ----
+    # ---- Target Analysis ----
     st.subheader("🎯 Target Analysis")
-    st.json(eda_report.get("target_analysis", {}))
+    st.json(eda.get("target_analysis", {}))
 
-    # ---- Numeric Analysis ----
-    st.subheader("🔢 Numeric Columns Analysis")
-    st.json(eda_report.get("numeric_analysis", {}))
+    # ---- Numeric Features ----
+    st.subheader("🔢 Numeric Feature Analysis")
+    st.json(eda.get("numeric_analysis", {}))
 
-    # ---- Correlation Matrix ----
-    st.subheader("🔗 Correlation Matrix")
-    st.json(eda_report.get("correlation_matrix", {}))
+    # ---- Ordinal Features ----
+    if eda.get("ordinal_analysis"):
+        st.subheader("📐 Ordinal Feature Analysis")
+        st.json(eda.get("ordinal_analysis", {}))
 
-    # ---- High Correlation Pairs ----
-    st.subheader("⚠️ High Correlation Pairs")
-    st.json(eda_report.get("high_correlation_pairs", {}))
+    # ---- Binary Outcome Analysis ----
+    if eda.get("binary_outcome_analysis"):
+        st.subheader("📈 Categorical vs Target Analysis")
+        st.json(eda.get("binary_outcome_analysis", {}))
 
-    # ---- Download JSON ----
+    # ---- Correlations ----
+    st.subheader("🔗 Feature Correlations")
+    st.json(eda.get("correlation_matrix", {}))
+
+    if eda.get("high_correlation_pairs"):
+        st.warning("⚠️ High Correlation Pairs Detected")
+        st.json(eda.get("high_correlation_pairs", {}))
+    else:
+        st.info("No highly correlated feature pairs detected.")
+
+    # ---- Download ----
     st.download_button(
         "⬇️ Download EDA Report (JSON)",
-        data=json.dumps(eda_report, indent=4),
+        data=json.dumps(eda, indent=4),
         file_name="eda_report.json",
         mime="application/json"
     )
 
 else:
-    st.info("Click 'Run EDA Analysis' to begin.")
-
-    if "eda_report" in st.session_state:
-        st.warning("Previously generated EDA report found.")
-
-st.write("EDA keys:", st.session_state["eda_report"].keys())
+    st.info("Click **Run EDA Analysis** to generate insights.")
