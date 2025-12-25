@@ -36,7 +36,7 @@ from pipeline.usage_manager import (
 init_plan_and_usage()
 
 # --------------------------------------------------
-# PROMPTS (RELAXED BUT SAFE)
+# PROMPTS 
 # --------------------------------------------------
 
 BASE_CONSTRAINTS = """

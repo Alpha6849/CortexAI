@@ -4,10 +4,8 @@ schema_detector.py
 Schema validation & analysis module for CortexAI.
 
 Design principles:
-- Dataset-agnostic
 - Human-in-the-loop (target provided by UI)
-- Validation-first (no guessing)
-- Every risky decision is explained
+
 """
 
 import pandas as pd

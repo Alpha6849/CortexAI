@@ -2,12 +2,8 @@
 cleaner.py
 
 Schema-driven data cleaning for CortexAI.
+uses the same schema 
 
-RULES:
-- Obeys schema strictly
-- Never re-detects anything
-- Never modifies target
-- Safe defaults (no destructive ops)
 """
 
 import pandas as pd

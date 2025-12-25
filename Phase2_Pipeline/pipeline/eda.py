@@ -3,11 +3,7 @@ eda.py
 
 Schema-driven EDA module for CortexAI.
 
-RULES:
 - Uses CLEANED dataframe only
-- Fully trusts schema (no guessing)
-- Never mutates data
-- Ordinal ≠ Numeric ≠ Categorical
 - Target is NEVER modified
 """
 
