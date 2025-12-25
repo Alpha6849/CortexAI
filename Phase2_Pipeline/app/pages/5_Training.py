@@ -107,12 +107,9 @@ if st.button("🚀 Start AutoML Training"):
 
     st.session_state["training_results"] = training_results
 
-    # --- Performance Summary ---
     st.markdown("### 📈 Mean CV Scores")
     for model, info in training_results.items():
-        st.write(
-            f"**{model}** → `{info['cv_mean_score']:.3f}`"
-        )
+        st.write(f"**{model}** → `{info['cv_mean_score']:.3f}`")
 
     with st.expander("🔍 Full cross-validation details"):
         st.json(training_results)
@@ -169,23 +166,37 @@ if st.button("🚀 Start AutoML Training"):
 
     st.info(f"**Verdict:** {dataset_quality['verdict']}")
 
-    # ---- Reasons ----
-    if dataset_quality["reasons"]:
-        st.markdown("### ✅ Why this dataset works")
-        for reason in dataset_quality["reasons"]:
-            st.write(f"✔ {reason}")
+    # -----------------------------
+    # Strengths
+    # -----------------------------
+    if dataset_quality["strengths"]:
+        st.markdown("### ✅ Strengths")
+        for s in dataset_quality["strengths"]:
+            st.write(f"✔ {s}")
 
-    # ---- Recommendations ----
+    # -----------------------------
+    # Risks
+    # -----------------------------
+    if dataset_quality["risks"]:
+        st.markdown("### ⚠ Risks & Limitations")
+        for r in dataset_quality["risks"]:
+            st.write(f"• {r}")
+
+    # -----------------------------
+    # Recommendations
+    # -----------------------------
     if dataset_quality["recommendations"]:
-        st.markdown("### 🔧 How to improve further")
+        st.markdown("### 🔧 Recommendations")
         for rec in dataset_quality["recommendations"]:
-            st.write(f"• {rec}")
+            st.write(f"→ {rec}")
 
     # -----------------------------
     # Save Outputs
     # -----------------------------
     model_path = trainer.save_best_model("best_model.pkl")
     summary = trainer.save_training_summary("training_summary.json")
+
+    st.session_state["training_summary"] = summary
 
     # -----------------------------
     # Downloads

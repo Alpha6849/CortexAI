@@ -2,7 +2,10 @@
 quality_analyzer.py
 
 Evaluates dataset suitability for Machine Learning.
-Provides a learnability score, verdict, reasons, and recommendations.
+Separates:
+- Strengths
+- Risks
+- Recommendations
 
 CortexAI Phase 2 — Product Intelligence Layer
 """
@@ -12,10 +15,6 @@ import numpy as np
 
 
 class DatasetQualityAnalyzer:
-    """
-    Analyzes dataset quality and ML learnability
-    using schema, EDA, and training results.
-    """
 
     def __init__(
         self,
@@ -29,8 +28,10 @@ class DatasetQualityAnalyzer:
         self.training = training_results
         self.baseline_name = baseline_name
 
-        self.score = 50  # neutral starting point
-        self.reasons: List[str] = []
+        self.score = 50  # neutral baseline
+
+        self.risks: List[str] = []
+        self.strengths: List[str] = []
         self.recommendations: List[str] = []
 
     # --------------------------------------------------
@@ -45,7 +46,8 @@ class DatasetQualityAnalyzer:
         return {
             "learnability_score": min(max(self.score, 0), 100),
             "verdict": self._verdict(),
-            "reasons": self.reasons,
+            "strengths": self.strengths,
+            "risks": self.risks,
             "recommendations": self.recommendations
         }
 
@@ -67,11 +69,11 @@ class DatasetQualityAnalyzer:
 
         if imbalance_ratio > 10:
             self.score -= 15
-            self.reasons.append(
+            self.risks.append(
                 f"Severe class imbalance detected (≈ {imbalance_ratio:.1f}:1)."
             )
             self.recommendations.append(
-                "Consider resampling, class weights, or alternative metrics."
+                "Consider resampling techniques or class-weighted models."
             )
 
     def _check_model_improvement(self):
@@ -79,34 +81,32 @@ class DatasetQualityAnalyzer:
             return
 
         baseline_score = self.training[self.baseline_name]["cv_mean_score"]
-        best_score = max(
-            v["cv_mean_score"] for v in self.training.values()
-        )
+        best_score = max(v["cv_mean_score"] for v in self.training.values())
 
         absolute_gain = best_score - baseline_score
 
         if absolute_gain >= 0.25:
             self.score += 30
-            self.reasons.append(
+            self.strengths.append(
                 f"Models significantly outperform the baseline (+{absolute_gain:.2f})."
             )
 
         elif absolute_gain >= 0.10:
             self.score += 15
-            self.reasons.append(
+            self.strengths.append(
                 f"Models moderately outperform the baseline (+{absolute_gain:.2f})."
             )
             self.recommendations.append(
-                "Feature engineering may further improve performance."
+                "Feature engineering could further improve performance."
             )
 
         else:
             self.score -= 20
-            self.reasons.append(
+            self.risks.append(
                 "Models show limited improvement over the baseline."
             )
             self.recommendations.append(
-                "Consider adding stronger features or revisiting the prediction task."
+                "Consider revisiting feature selection or problem framing."
             )
 
     def _check_feature_richness(self):
@@ -118,12 +118,12 @@ class DatasetQualityAnalyzer:
 
         if feature_count >= 6:
             self.score += 10
-            self.reasons.append(
+            self.strengths.append(
                 "Dataset contains a diverse and informative feature set."
             )
         elif feature_count <= 2:
             self.score -= 10
-            self.reasons.append(
+            self.risks.append(
                 "Very limited number of usable features detected."
             )
 
@@ -131,8 +131,8 @@ class DatasetQualityAnalyzer:
     # FINALIZATION
     # --------------------------------------------------
     def _finalize_score(self):
-        if not self.reasons:
-            self.reasons.append(
+        if not self.risks and not self.strengths:
+            self.strengths.append(
                 "No major data quality issues detected."
             )
 

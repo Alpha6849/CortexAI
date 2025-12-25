@@ -83,7 +83,9 @@ if uploaded:
     # --------------------------------------------------
     st.session_state["raw_df"] = df.copy()
     st.session_state["df"] = df.copy()
-    st.session_state["meta"] = meta
+
+    # ✅ REQUIRED BY REPORT ADAPTER
+    st.session_state["dataset_metadata"] = meta
 
     # --------------------------------------------------
     # Preview
