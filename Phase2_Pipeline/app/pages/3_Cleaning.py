@@ -26,12 +26,13 @@ df = st.session_state["df"]
 schema = st.session_state["schema"]
 
 st.write("""
-This step cleans your dataset automatically using CortexAI's production cleaner:
-- Removes ID columns  
-- Fixes missing values  
-- Fixes column types  
-- Handles outliers  
-- Detects high-cardinality columns  
+This step cleans your dataset automatically using CortexAI's schema-driven cleaner:
+
+• Removes ID columns  
+• Drops high-cardinality & high-missing columns (from schema)  
+• Fixes missing values (features only)  
+• Fixes column types  
+• Strictly preserves the target column   
 """)
 
 # Run cleaning (button so it doesn't auto-run every rerender)
@@ -65,4 +66,8 @@ else:
     st.info("Click 'Run Cleaning Pipeline' to begin.")
 
     if "cleaned_df" in st.session_state:
-        st.warning("You have a previously cleaned dataset stored.")
+        st.warning(
+            "You have a previously cleaned dataset stored. "
+            "Click 'Run Cleaning Pipeline' again to re-clean using the current schema."
+          )
+
