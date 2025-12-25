@@ -3,15 +3,14 @@ report_generator.py
 
 CortexAI — Enterprise PDF Report Generator (FINAL v1)
 
-✔ Dense, readable pages
-✔ No empty / awkward sections
-✔ Dataset-adaptive narration
-✔ ReportLab-safe (no wrapOn errors)
-✔ Correct semantics:
+ Dense, readable pages
+ No empty / awkward sections
+ Dataset-adaptive narration
+ Correct semantics:
     - Strengths
     - Risks
     - Recommendations
-✔ Python 3.12 safe
+ Python 3.12 safe
 """
 
 import datetime

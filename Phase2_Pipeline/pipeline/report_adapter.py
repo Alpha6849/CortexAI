@@ -2,7 +2,7 @@
 report_adapter.py
 
 Canonical Report Adapter for CortexAI.
-This is the SINGLE SOURCE OF TRUTH for report data.
+This is for report data.
 """
 
 from typing import Dict, Any
