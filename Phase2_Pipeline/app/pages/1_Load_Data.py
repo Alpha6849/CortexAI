@@ -1,7 +1,6 @@
 import sys
 import os
 import streamlit as st
-import pandas as pd
 
 # --------------------------------------------------
 # Fix import path
@@ -55,13 +54,12 @@ if uploaded:
     try:
         loader = DataLoader(temp_path)
         df, meta = loader.load()
-
     except Exception as e:
         st.error(f"DataLoader failed: {e}")
         st.stop()
 
     # --------------------------------------------------
-    # Enforce row limits
+    # Enforce row limits AFTER load
     # --------------------------------------------------
     max_rows = get_plan_limits().get("max_rows", 0)
 
@@ -74,16 +72,17 @@ if uploaded:
         st.stop()
 
     # --------------------------------------------------
-    # Increment upload usage
+    # Increment usage
     # --------------------------------------------------
     increment_usage("uploads")
 
     st.success("File loaded successfully using CortexAI DataLoader!")
 
     # --------------------------------------------------
-    # Save to session state
+    # Save immutable copies to session state
     # --------------------------------------------------
-    st.session_state["df"] = df
+    st.session_state["raw_df"] = df.copy()
+    st.session_state["df"] = df.copy()
     st.session_state["meta"] = meta
 
     # --------------------------------------------------

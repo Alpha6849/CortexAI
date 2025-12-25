@@ -1,9 +1,23 @@
+"""
+schema_detector.py
+
+Schema validation & analysis module for CortexAI.
+
+Design principles:
+- Dataset-agnostic
+- Human-in-the-loop (target provided by UI)
+- Validation-first (no guessing)
+- Every risky decision is explained
+"""
+
 import pandas as pd
-import numpy as np
-from typing import Dict, List
 import logging
 import re
+from typing import Dict, List
 
+# --------------------------------------------------
+# LOGGER
+# --------------------------------------------------
 logger = logging.getLogger("SchemaDetector")
 logger.setLevel(logging.INFO)
 
@@ -17,193 +31,212 @@ if not logger.handlers:
 
 
 class SchemaDetector:
-    """
-    Detects schema information from a pandas DataFrame:
-    - Column types
-    - ID columns
-    - Target column
-    - Numeric / categorical / datetime grouping
-    """
-
     def __init__(self, df: pd.DataFrame):
         self.df = df
+        self.n_rows = len(df)
 
     # --------------------------------------------------
-    # COLUMN TYPE DETECTION
+    # BASIC TYPE DETECTION
     # --------------------------------------------------
     def _detect_numeric_columns(self) -> List[str]:
-        numeric_cols = self.df.select_dtypes(
-            include=["int64", "float64"]
-        ).columns.tolist()
-        logger.info(f"Numeric columns detected: {numeric_cols}")
-        return numeric_cols
+        return self.df.select_dtypes(include=["int64", "float64"]).columns.tolist()
 
     def _detect_categorical_columns(self) -> List[str]:
-        categorical_cols = self.df.select_dtypes(
-            include=["object"]
-        ).columns.tolist()
-        logger.info(f"Categorical columns detected: {categorical_cols}")
-        return categorical_cols
+        return self.df.select_dtypes(include=["object"]).columns.tolist()
 
     def _detect_datetime_columns(self) -> List[str]:
         datetime_cols = []
-
         for col in self.df.columns:
-            if pd.api.types.is_numeric_dtype(self.df[col]):
-                continue
-            try:
-                parsed = pd.to_datetime(
-                    self.df[col],
-                    errors="raise",
-                    infer_datetime_format=True
-                )
-                if parsed.notna().mean() > 0.5:
-                    datetime_cols.append(col)
-            except Exception:
-                continue
-
-        logger.info(f"Datetime columns detected: {datetime_cols}")
+            if self.df[col].dtype == "object":
+                try:
+                    parsed = pd.to_datetime(self.df[col], errors="raise")
+                    if parsed.notna().mean() > 0.5:
+                        datetime_cols.append(col)
+                except Exception:
+                    pass
         return datetime_cols
 
     # --------------------------------------------------
-    # ID COLUMN DETECTION
+    # ID DETECTION (NAME-BASED ONLY)
     # --------------------------------------------------
     def _detect_id_columns(self) -> List[str]:
-
         id_patterns = [
-            r"\bid\b", r"\bidentifier\b", r"\buuid\b", r"\bserial\b",
-            r"\bindex\b", r"\bs\.?no\b",
-            r"\buser[_\- ]?id\b",
-            r"\bpatient[_\- ]?id\b",
-            r"\btransaction[_\- ]?id\b",
+            r"^id$",
+            r"_id$",
+            r"id$",
+            r"^uuid$",
+            r"^index$",
+            r"^s\.?no$"
         ]
 
         id_cols = []
-
         for col in self.df.columns:
             col_lower = col.lower()
-
             if any(re.search(p, col_lower) for p in id_patterns):
                 id_cols.append(col)
-                continue
 
-            unique_ratio = self.df[col].nunique() / len(self.df)
-            if unique_ratio > 0.98:
-                id_cols.append(col)
-
-        logger.info(f"ID columns detected: {id_cols}")
         return id_cols
 
     # --------------------------------------------------
-    # TARGET COLUMN DETECTION (SCORING BASED)
+    # HIGH CARDINALITY (TEXT-LIKE)
     # --------------------------------------------------
-    def _detect_target_column(self) -> str:
-        """
-        Domain-agnostic target detection using structural scoring.
-        Handles binary ambiguity safely.
-        """
+    def _detect_high_cardinality_columns(self) -> List[str]:
+        high_card_cols = []
 
-        id_cols = set(self._detect_id_columns())
+        for col in self.df.select_dtypes(include=["object"]).columns:
+            unique_ratio = self.df[col].nunique() / self.n_rows
+            threshold = max(0.3, 10 / self.n_rows)
 
-        generic_target_patterns = [
-            r"\btarget\b", r"\blabel\b", r"\bclass\b",
-            r"\boutcome\b", r"\bresult\b", r"\by$"
-        ]
+            if unique_ratio > threshold:
+                high_card_cols.append(col)
 
-        scores = {}
+        return high_card_cols
 
-        for col in self.df.columns:
-            if col in id_cols:
+    # --------------------------------------------------
+    # ORDINAL NUMERIC DETECTION (TARGET-SAFE)
+    # --------------------------------------------------
+    def _detect_ordinal_columns(
+        self,
+        numeric_cols: List[str],
+        target_col: str
+    ) -> List[str]:
+
+        ordinal_cols = []
+
+        for col in numeric_cols:
+            if col == target_col:
                 continue
 
-            nunique = self.df[col].nunique()
-            if nunique <= 1:
+            series = self.df[col].dropna()
+            if series.empty:
                 continue
 
-            score = 0
-            col_lower = col.lower()
-            is_numeric = pd.api.types.is_numeric_dtype(self.df[col])
-            is_object = self.df[col].dtype == "object"
+            if series.nunique() <= 10 and (series % 1 == 0).all():
+                ordinal_cols.append(col)
 
-            #  Weak generic name signal
-            if any(re.search(p, col_lower) for p in generic_target_patterns):
-                score += 3
+        return ordinal_cols
 
-            #  Binary dominance (core signal)
-            if nunique == 2:
-                score += 6
+    # --------------------------------------------------
+    # CATEGORICAL SPLIT BY MISSINGNESS
+    # --------------------------------------------------
+    def _split_categorical_by_missing(self, cat_cols: List[str]):
+        normal = []
+        high_missing = []
 
-                # Penalize categorical grouping features (e.g., Sex, Gender)
-                if is_object:
-                    score -= 2
+        for col in cat_cols:
+            missing_ratio = self.df[col].isna().mean()
+            if missing_ratio > 0.4:
+                high_missing.append(col)
+            else:
+                normal.append(col)
 
-                # Prefer encoded numeric binary outcomes (0/1)
-                if is_numeric:
-                    score += 1
+        return normal, high_missing
 
-            # Small multi-class outcome
-            elif 3 <= nunique <= 10:
-                score += 2
+    # --------------------------------------------------
+    # TARGET VALIDATION (USER-SELECTED)
+    # --------------------------------------------------
+    def _validate_target(self, target_col: str) -> Dict:
+        warnings = []
 
-                # Penalize ordinal numeric encodings
-                if is_numeric:
-                    score -= 2
+        if target_col not in self.df.columns:
+            raise ValueError(f"Target column `{target_col}` not found.")
 
-            #  Penalize feature-like high cardinality
-            if nunique > 50:
-                score -= 3
+        nunique = self.df[target_col].nunique()
+        numeric_target = pd.api.types.is_numeric_dtype(self.df[target_col])
 
-            scores[col] = score
-            logger.info(f"Target score — {col}: {score}")
+        if nunique <= 1:
+            warnings.append("Target column is constant or near-constant.")
 
-        if not scores:
-            raise ValueError("No valid target candidates found.")
+        if target_col in self._detect_id_columns():
+            warnings.append("Target column appears to be an ID column.")
 
-        # Sort for transparency
-        sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)
-
-        # Ambiguity detection
-        if (
-            len(sorted_scores) > 1 and
-            sorted_scores[0][1] - sorted_scores[1][1] <= 1
-        ):
-            logger.warning(
-                f"Ambiguous target detection between "
-                f"{sorted_scores[0][0]} and {sorted_scores[1][0]}"
+        if numeric_target and nunique <= 10:
+            warnings.append(
+                f"Target treated as classification due to low cardinality (n={nunique})."
             )
 
-        best_target = sorted_scores[0][0]
-        logger.info(f"Selected target column: {best_target}")
+        task_type = (
+            "regression"
+            if numeric_target and nunique > 10
+            else "classification"
+        )
 
-        return best_target
-
-    # --------------------------------------------------
-    # MAIN SCHEMA DETECTOR
-    # --------------------------------------------------
-    def detect(self) -> Dict:
-
-        logger.info("Starting schema detection...")
-
-        schema = {
-            "numeric": self._detect_numeric_columns(),
-            "categorical": self._detect_categorical_columns(),
-            "datetime": self._detect_datetime_columns(),
-            "id_columns": self._detect_id_columns(),
-            "target": self._detect_target_column()
+        return {
+            "target": target_col,
+            "task_type": task_type,
+            "target_warnings": warnings
         }
 
-        # Final safety check
-        if schema["target"] in schema["id_columns"]:
-            raise ValueError(
-                f"Detected target `{schema['target']}` appears to be an ID column."
+    # --------------------------------------------------
+    # DATASET-LEVEL WARNINGS
+    # --------------------------------------------------
+    def _dataset_warnings(
+        self,
+        numeric_cols: List[str],
+        high_missing_cat: List[str]
+    ) -> List[str]:
+
+        warnings = []
+
+        for col in high_missing_cat:
+            ratio = self.df[col].isna().mean()
+            warnings.append(f"High missing values in `{col}` ({ratio:.0%})")
+
+        for col in numeric_cols:
+            series = self.df[col].dropna()
+            if not series.empty and series.skew() > 1.5:
+                warnings.append(f"`{col}` is heavily right-skewed")
+
+        return warnings
+
+    # --------------------------------------------------
+    # MAIN SCHEMA GENERATOR
+    # --------------------------------------------------
+    def detect(self, target_col: str) -> Dict:
+        logger.info("Starting schema detection & validation")
+
+        numeric_cols = self._detect_numeric_columns()
+        categorical_cols = self._detect_categorical_columns()
+        datetime_cols = self._detect_datetime_columns()
+        id_columns = self._detect_id_columns()
+        high_cardinality = self._detect_high_cardinality_columns()
+
+        ordinal_cols = self._detect_ordinal_columns(numeric_cols, target_col)
+
+        numeric_continuous = [
+            c for c in numeric_cols
+            if c not in ordinal_cols and c != target_col and c not in id_columns
+        ]
+
+        categorical_cols = [
+            c for c in categorical_cols
+            if c not in high_cardinality and c not in id_columns
+        ]
+
+        categorical_clean, categorical_high_missing = (
+            self._split_categorical_by_missing(categorical_cols)
+        )
+
+        target_info = self._validate_target(target_col)
+
+        schema = {
+            "target": target_info["target"],
+            "task_type": target_info["task_type"],
+
+            "numeric": numeric_continuous,
+            "ordinal": ordinal_cols,
+            "categorical": categorical_clean,
+
+            "high_missing_categorical": categorical_high_missing,
+            "high_cardinality_columns": high_cardinality,
+            "id_columns": id_columns,
+            "datetime": datetime_cols,
+
+            "warnings": (
+                target_info["target_warnings"]
+                + self._dataset_warnings(numeric_continuous, categorical_high_missing)
             )
+        }
 
-        logger.info(f"Schema detection complete: {schema}")
+        logger.info("Schema detection complete")
         return schema
-
-   
-
-
-
-
-

@@ -4,12 +4,12 @@ trainer.py
 Handles automatic model training, evaluation,
 and best-model selection for CortexAI Phase 2.
 
-AutoML v1 (REAL, not toy):
+AutoML v1:
 - Numeric-only (safe)
+- Schema-driven task type
 - Proper preprocessing pipelines
 - Baseline sanity check
 - Correct metrics
-- Stable model selection
 """
 
 import logging
@@ -27,16 +27,16 @@ class ModelTrainer:
         self.schema = schema
 
         self.target = schema.get("target")
-        if not self.target:
-            raise ValueError("Target column not found in schema.")
+        self.task_type = schema.get("task_type")
+        self.warnings = schema.get("warnings", [])
 
-        # Task detection
-        if df[self.target].dtype == "object":
-            self.task_type = "classification"
-        elif df[self.target].nunique() <= 15:
-            self.task_type = "classification"
-        else:
-            self.task_type = "regression"
+        if not self.target or self.target not in df.columns:
+            raise ValueError("Target column missing in trainer.")
+
+        # Hard stop on fatal schema warnings
+        for w in self.warnings:
+            if "constant" in w.lower():
+                raise ValueError(f"Invalid target: {w}")
 
         self.X = None
         self.y = None
@@ -45,6 +45,7 @@ class ModelTrainer:
         self.best_model = None
         self.best_model_name = None
         self.best_score = -1e9
+        self.metric_used = None
         self.label_encoder = None
 
     # --------------------------------------------------
@@ -57,7 +58,9 @@ class ModelTrainer:
 
         feature_cols = [
             c for c in numeric_cols
-            if c != self.target and c not in id_cols and c in self.df.columns
+            if c != self.target
+            and c not in id_cols
+            and c in self.df.columns
         ]
 
         if not feature_cols:
@@ -85,13 +88,13 @@ class ModelTrainer:
         }
 
     # --------------------------------------------------
-    # TRAIN MODELS (FIXED)
+    # TRAIN MODELS
     # --------------------------------------------------
     def train_all_models(self):
 
         from sklearn.pipeline import Pipeline
         from sklearn.preprocessing import StandardScaler
-        from sklearn.dummy import DummyClassifier
+        from sklearn.dummy import DummyClassifier, DummyRegressor
 
         from sklearn.linear_model import LogisticRegression, LinearRegression
         from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
@@ -103,7 +106,7 @@ class ModelTrainer:
         # ---------------- CLASSIFICATION ----------------
         if self.task_type == "classification":
 
-            scoring = "f1_weighted"
+            self.metric_used = "f1_weighted"
 
             models = {
                 "Baseline": DummyClassifier(strategy="most_frequent"),
@@ -132,9 +135,11 @@ class ModelTrainer:
         # ---------------- REGRESSION ----------------
         else:
 
-            scoring = "r2"
+            self.metric_used = "r2"
 
             models = {
+                "Baseline": DummyRegressor(strategy="mean"),
+
                 "LinearRegression": Pipeline([
                     ("scaler", StandardScaler()),
                     ("model", LinearRegression())
@@ -154,7 +159,7 @@ class ModelTrainer:
                     self.X,
                     self.y,
                     cv=kf,
-                    scoring=scoring
+                    scoring=self.metric_used
                 )
             except Exception as e:
                 logger.warning(f"{name} failed: {e}")
@@ -193,6 +198,7 @@ class ModelTrainer:
                 "model": self.best_model,
                 "label_encoder": self.label_encoder,
                 "task_type": self.task_type,
+                "metric": self.metric_used,
                 "features": list(self.X.columns)
             },
             output_path
@@ -204,6 +210,7 @@ class ModelTrainer:
 
         summary = {
             "task_type": self.task_type,
+            "metric": self.metric_used,
             "best_model": self.best_model_name,
             "best_score": float(self.best_score),
             "all_model_scores": self.results
