@@ -106,9 +106,9 @@ class DataCleaner:
 
         self.report["missing_values"] = missing_info
 
-    # --------------------------------------------------
+    
     # TYPE CASTING
-    # --------------------------------------------------
+
     def _fix_column_types(self):
         type_changes = {}
 
