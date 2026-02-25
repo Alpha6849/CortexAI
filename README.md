@@ -56,12 +56,6 @@ Cortex AI /
 - Multi-agent workflow  
 - Explainability tools (SHAP, error analysis)  
 
-### **Phase 4 — Deployment**
-- Cloud deployment  
-- Documentation  
-- Public demo  
-
----
 
 ## 🛠 Tech Stack
 
