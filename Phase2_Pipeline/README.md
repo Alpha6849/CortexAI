@@ -8,7 +8,6 @@ This phase includes:
 - Clean and testable pipeline modules
 - A Streamlit UI for CSV → AutoML inference
 - Optional LLM reasoning layer for insights
-- Monetization-ready architecture (Pro features, limits, reports)
 - Documentation + logging + model saving
 
 ## 📁 Folder Structure
@@ -49,12 +48,4 @@ Phase2_Pipeline/
 - Currently implementing `loader.py`  
 - Modules will be fleshed out sequentially
 
-## Upcoming Steps
 
-1. Implement loader module
-2. Implement schema detector module
-3. Implement cleaner module
-4. Implement EDA engine
-5. Implement trainer engine
-6. Build Streamlit UI
-7. Add Pro features (LLM insights + PDF reports)
